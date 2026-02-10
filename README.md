@@ -1,348 +1,261 @@
 <p align="center">
-  <img src="https://github.com/dunamismax/images/blob/main/golang/go-logo.png" alt="Go Web Server Template Logo" width="400" />
+  <img src="https://github.com/dunamismax/images/blob/main/golang/go-logo.png" alt="Go Web Server logo" width="260" />
 </p>
 
-<p align="center">
-  <a href="https://github.com/dunamismax/go-web-server">
-    <img src="https://readme-typing-svg.demolab.com/?font=Fira+Code&size=24&pause=1000&color=00ADD8&center=true&vCenter=true&width=900&lines=The+Modern+Go+Stack;Echo+v4+Framework+with+Type-Safe+Templates;HTMX+Dynamic+UX+without+JavaScript;SQLC+Generated+Queries+with+PostgreSQL;CSRF+Protection+and+Input+Sanitization;Structured+Error+Handling+and+Request+Tracing;Hot+Reload+Development+with+Mage+Automation;Single+Binary+Deployment+at+15MB;Production-Ready+Security+Middleware;Ubuntu+SystemD+Deployment" alt="Typing SVG" />
-  </a>
-</p>
+# Go Web Server
+
+Production-oriented Go web application template built on the **Modern Go Stack**: Echo, Templ, HTMX, SQLC, PostgreSQL, and Mage. It is designed for teams that want strong defaults for security, maintainability, and fast iteration without a heavy frontend framework.
 
 <p align="center">
   <a href="https://golang.org/"><img src="https://img.shields.io/badge/Go-1.25+-00ADD8.svg?logo=go" alt="Go Version"></a>
   <a href="https://echo.labstack.com/"><img src="https://img.shields.io/badge/Framework-Echo_v4-00ADD8.svg?logo=go" alt="Echo Framework"></a>
   <a href="https://templ.guide/"><img src="https://img.shields.io/badge/Templates-Templ-00ADD8.svg?logo=go" alt="Templ"></a>
   <a href="https://htmx.org/"><img src="https://img.shields.io/badge/Frontend-HTMX_2.x-3D72D7.svg?logo=htmx" alt="HTMX"></a>
-  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/CSS-Tailwind_CSS-06B6D4.svg?logo=tailwindcss" alt="Tailwind CSS"></a>
-  <a href="https://daisyui.com/"><img src="https://img.shields.io/badge/Components-DaisyUI-5A0EF8.svg" alt="DaisyUI"></a>
   <a href="https://sqlc.dev/"><img src="https://img.shields.io/badge/Queries-SQLC-00ADD8.svg?logo=go" alt="SQLC"></a>
   <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/Database-PostgreSQL-336791.svg?logo=postgresql" alt="PostgreSQL"></a>
-  <a href="https://pkg.go.dev/github.com/jackc/pgx/v5"><img src="https://img.shields.io/badge/Driver-pgx_v5-00ADD8.svg?logo=go" alt="pgx PostgreSQL Driver"></a>
-  <a href="https://pkg.go.dev/log/slog"><img src="https://img.shields.io/badge/Logging-slog-00ADD8.svg?logo=go" alt="Go slog"></a>
-  <a href="https://github.com/knadh/koanf"><img src="https://img.shields.io/badge/Config-Koanf-00ADD8.svg?logo=go" alt="Koanf"></a>
-  <a href="https://atlasgo.io/"><img src="https://img.shields.io/badge/Migrations-Atlas-FF6B6B.svg" alt="Atlas"></a>
-  <a href="https://magefile.org/"><img src="https://img.shields.io/badge/Build-Mage-purple.svg?logo=go" alt="Mage"></a>
-  <a href="https://github.com/air-verse/air"><img src="https://img.shields.io/badge/HotReload-Air-FF6B6B.svg?logo=go" alt="Air"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License"></a>
 </p>
 
----
+## Quick Start
 
-## Live Demo
+### Prerequisites
 
-**[View Live Demo →](https://go.dunamismax.com/)** - Self-hosted production deployment showcasing the complete Modern Go Stack in action.
+- Linux, macOS, or WSL2 (recommended). Native Windows PowerShell is not the primary target because Mage tasks use Unix utilities like `which`.
+- Go 1.25+
+- PostgreSQL 15+
+- Node.js + npm (for Tailwind build)
+- [Atlas CLI](https://atlasgo.io/getting-started)
+- [Mage](https://magefile.org/) (`go install github.com/magefile/mage@latest`)
 
----
+### 1. Clone and configure
 
-## About
+```bash
+git clone https://github.com/dunamismax/go-web-server.git
+cd go-web-server
+cp .env.example .env
+```
 
-A production-ready template for modern web applications using **The Modern Go Stack** - a cohesive technology stack for building high-performance, maintainable applications. Creates single, self-contained binaries with zero external dependencies.
+Edit `.env` with real database credentials (at minimum `DATABASE_USER`, `DATABASE_PASSWORD`, or a full `DATABASE_URL`).
 
-**Key Features:**
+### 2. Prepare PostgreSQL
 
-- **Echo v4 + Templ + HTMX**: High-performance web framework with type-safe templates and dynamic UX
-- **SQLC + PostgreSQL + pgx Driver**: Type-safe database operations with high performance and connection pooling
-- **Session Authentication**: Secure session-based authentication with Argon2id password hashing
-- **Tailwind CSS + DaisyUI**: Modern utility-first CSS framework with comprehensive component library
-- **Enterprise Security**: CSRF protection, input sanitization, XSS/SQL injection prevention, structured error handling
-- **Atlas Migrations**: Declarative schema management with automatic migration generation
-- **Mage Build System**: Go-based automation with comprehensive quality checks and vulnerability scanning
-- **Production Ready**: Rate limiting, CORS, security headers, graceful shutdown, and embedded static assets
-- **Developer Experience**: Hot reload with Air, schema migrations with Atlas, multi-source config with Koanf
+```bash
+sudo -u postgres createuser -P gowebserver
+sudo -u postgres createdb -O gowebserver gowebserver
+```
+
+### 3. Install tools and generate code
+
+```bash
+mage setup
+mage generate
+```
+
+### 4. Apply database migrations
+
+```bash
+mage migrate
+```
+
+### 5. Run development server
+
+```bash
+mage dev
+```
+
+Open `http://localhost:8080`.
+
+Expected results:
+- Home page loads with HTMX-enabled UI
+- `GET /health` returns JSON health data
+- Login and registration routes are available at `/auth/login` and `/auth/register`
+
+## Why This Template
+
+- Fast server-rendered UX with HTMX, no SPA complexity required
+- Type-safe database and template workflow (SQLC + Templ)
+- Session authentication with Argon2id password hashing
+- Security middleware included by default (CSRF, sanitization, headers, rate limiting)
+- Single-binary deployment with embedded static assets
+- Practical build and quality automation through Mage
+
+## Feature Overview
+
+- **Web stack**: Echo v4 + Templ + HTMX + Tailwind + DaisyUI
+- **Data layer**: PostgreSQL + pgx/v5 + SQLC generated queries
+- **Auth model**: Session-based auth using `scs` with PostgreSQL-backed sessions
+- **Security controls**: CSRF protection, input sanitization, strict security headers, request IDs, structured errors
+- **Ops readiness**: graceful shutdown, systemd service, deployment scripts, structured logging with `slog`
+- **Dev workflow**: hot reload with Air, code generation, linting, vulnerability checks
 
 ## Tech Stack
 
-| Layer          | Technology                                                  | Purpose                                |
-| -------------- | ----------------------------------------------------------- | -------------------------------------- |
-| **Language**   | [Go 1.25+](https://go.dev/doc/)                             | Latest performance & language features |
-| **Framework**  | [Echo v4](https://echo.labstack.com/)                       | High-performance web framework         |
-| **Templates**  | [Templ](https://templ.guide/)                      | Type-safe Go HTML components           |
-| **Frontend**   | [HTMX](https://htmx.org/)                             | Dynamic interactions with smooth UX    |
-| **CSS**        | [Tailwind CSS](https://tailwindcss.com/) + [DaisyUI](https://daisyui.com/) | Utility-first CSS with component library |
-| **Authentication** | [Session-based](https://github.com/alexedwards/scs) + [Argon2id](https://pkg.go.dev/golang.org/x/crypto/argon2) | Secure session auth with password hashing |
-| **Logging**    | [slog](https://pkg.go.dev/log/slog)                         | Structured logging with JSON output    |
-| **Database**   | [PostgreSQL](https://www.postgresql.org/)                   | Enterprise-grade relational database   |
-| **Queries**    | [SQLC](https://sqlc.dev/)                           | Generate type-safe Go from SQL         |
-| **Validation** | [go-playground/validator](https://github.com/go-playground/validator) | Comprehensive input validation |
-| **DB Driver**  | [pgx v5](https://pkg.go.dev/github.com/jackc/pgx/v5)       | High-performance PostgreSQL driver with pooling |
-| **Assets**     | [Go Embed](https://pkg.go.dev/embed)                        | Single binary with embedded resources  |
-| **Config**     | [Koanf](https://github.com/knadh/koanf)                     | Multi-source configuration management  |
-| **Migrations** | [Atlas](https://atlasgo.io/)                   | Declarative schema management          |
-| **Build**      | [Mage](https://magefile.org/)                               | Go-based build automation              |
-| **Hot Reload** | [Air](https://github.com/air-verse/air)                     | Development server with live reload    |
-
----
-
-## Quick Start
-
-### Ubuntu Production Deployment (Recommended)
-
-```bash
-# Clone repository
-git clone https://github.com/dunamismax/go-web-server.git
-cd go-web-server
-
-# Install PostgreSQL
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-
-# Create database and user
-sudo -u postgres createdb gowebserver
-sudo -u postgres createuser -P gowebserver  # Set password when prompted
-
-# Create your environment file
-cp .env.example .env
-# Edit .env with your database credentials (DATABASE_USER, DATABASE_PASSWORD, etc.)
-
-# Install Go dependencies and build
-mage setup
-mage build
-
-# Run database migrations
-mage migrate
-
-# Server binary available at: bin/server
-```
-
-**Requirements:** Ubuntu 20.04+, PostgreSQL, Go 1.25+
-
-### Local Development
-
-```bash
-# Clone and setup
-git clone https://github.com/dunamismax/go-web-server.git
-cd go-web-server
-go mod tidy
-
-# Create your environment file
-cp .env.example .env
-# Edit .env with your database credentials (DATABASE_USER, DATABASE_PASSWORD, etc.)
-
-# Install development tools and dependencies
-mage setup
-
-# Ensure PostgreSQL is running locally
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-
-# Start development server with hot reload
-mage dev
-
-# Server starts at http://localhost:8080
-```
-
-**Requirements:**
-
-- Go 1.25+
-- Mage build tool (`go install github.com/magefile/mage@latest`)
-- PostgreSQL database (local installation)
-- Node.js + npm (for Tailwind CSS build)
-
-**Note:** First run of `mage setup` installs all development tools automatically.
-
-## Documentation
-
-**[Complete Documentation](docs/)** - Comprehensive guides for development, deployment, security, and architecture.
-
-| Guide | Description |
-|-------|-------------|
-| **[Development Guide](docs/development.md)** | Local setup, hot reload, database management, and daily workflow |
-| **[API Reference](docs/api.md)** | HTTP endpoints, HTMX integration, and CSRF protection |
-| **[Architecture](docs/architecture.md)** | System design, components, and technology decisions |
-| **[Security Guide](docs/security.md)** | CSRF, sanitization, headers, rate limiting, and monitoring |
-| **[Deployment Guide](docs/deployment.md)** | Traditional production deployment and configuration |
-
----
-
-<p align="center">
-  <img src="https://github.com/dunamismax/images/blob/main/golang/gopher-mage.svg" alt="Gopher Mage" width="150" />
-</p>
-
-## Mage Commands
-
-Run `mage help` to see all available commands and their aliases.
-
-**Development:**
-
-```bash
-mage setup (s)        # Install tools and dependencies
-mage generate (g)     # Generate sqlc and templ code
-mage dev (d)          # Start development server with hot reload
-mage run (r)          # Build and run server
-mage build (b)        # Build production binary
-```
-
-**Database:**
-
-```bash
-mage migrate (m)      # Run database migrations up
-mage migrateDown      # Roll back last migration
-mage migrateStatus    # Show migration status
-```
-
-**Quality & Production:**
-
-```bash
-mage fmt (f)          # Format code with goimports and tidy modules
-mage vet (v)          # Run go vet static analysis
-mage lint (l)         # Run golangci-lint comprehensive linting
-mage vulncheck (vc)   # Check for security vulnerabilities
-mage quality (q)      # Run all quality checks
-mage ci               # Complete CI pipeline
-mage clean (c)        # Clean build artifacts
-```
-
-**Observability & Monitoring:**
-
-```bash
-# Enable Prometheus metrics (via environment variables)
-FEATURES_ENABLE_METRICS=true mage run
-# Then access metrics at: http://localhost:8080/metrics
-
-# Enhanced health checks with database connectivity
-curl http://localhost:8080/health
-
-# Test JWT authentication endpoints
-curl -X POST http://localhost:8080/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","name":"Test User","password":"StrongPass123"}'
-
-curl -X POST http://localhost:8080/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"StrongPass123"}'
-
-# Note: Demo mode currently bypasses password validation for existing users.
-# For production, implement proper password hashing and validation in auth handlers.
-```
-
-## Live Demo
-
-### Web Application (`localhost:8080`)
-
-Interactive user management application demonstrating:
-
-- **Session Authentication**: Login/register system with secure session-based auth and Argon2id hashing
-- **CRUD Operations**: Type-safe database queries with CSRF protection
-- **Real-time Updates**: HTMX interactions with smooth page transitions
-- **Responsive Design**: Modern Tailwind CSS styling with DaisyUI components and multiple themes
-- **Enterprise Security**: Input sanitization, XSS/SQL injection prevention, and structured error handling
-
-<p align="center">
-  <img src="https://github.com/dunamismax/images/blob/main/golang/go-web-server-screenshot.png" alt="Go Web Server Screenshot" width="800" />
-</p>
-
-> **Easter Egg**: The default user database comes pre-populated with Robert Griesemer, Rob Pike, and Ken Thompson - the three brilliant minds who created the Go programming language at Google starting in 2007. A small tribute to the creators of the language that powers this entire stack!
+| Layer | Technology | Purpose |
+| --- | --- | --- |
+| Language | Go 1.25+ | Application runtime |
+| HTTP | Echo v4 | Routing and middleware |
+| Templates | Templ | Type-safe server-rendered UI |
+| Frontend behavior | HTMX 2.x | Progressive dynamic interactions |
+| CSS | Tailwind CSS + DaisyUI | Styling and components |
+| Database | PostgreSQL | Relational storage |
+| DB driver | pgx/v5 | High-performance PostgreSQL driver |
+| Query generation | SQLC | Compile-time safe SQL access |
+| Auth/session | scs + pgxstore + Argon2id | Secure session auth and password hashing |
+| Config | Koanf | Defaults + `.env` + file + env layering |
+| Migrations | Atlas | Declarative schema migration workflow |
+| Build/dev tooling | Mage + Air | Automation and hot reload |
 
 ## Project Structure
 
-```sh
+```text
 go-web-server/
-├── cmd/web/              # Application entry point with main.go
-├── docs/                 # Complete documentation
+├── cmd/web/                    # Entry point
 ├── internal/
-│   ├── config/           # Viper configuration management
-│   ├── handler/          # HTTP handlers (auth, home, user, routes)
-│   ├── middleware/       # Security, auth, CSRF, validation, error handling, metrics
-│   ├── store/            # Database layer with SQLC (models, queries, migrations)
-│   │   └── migrations/   # Goose database migrations
-│   ├── ui/               # Static assets (embedded CSS, JS, favicon)
-│   └── view/             # Templ templates and components
-├── scripts/              # Deployment scripts and systemd service
-├── bin/                  # Compiled binaries
-├── tmp/                  # Development hot reload directory  
-├── magefile.go          # Mage build automation with comprehensive commands
-├── .golangci.yml        # Linter configuration
-├── sqlc.yaml            # SQLC configuration
-├── go.mod/go.sum        # Go module dependencies
-└── .env.example         # Environment configuration template
-
+│   ├── config/                 # Configuration loading (Koanf)
+│   ├── handler/                # HTTP handlers and route registration
+│   ├── middleware/             # CSRF, auth, sanitization, error handling
+│   ├── store/                  # SQLC queries, schema, and DB store
+│   ├── ui/                     # Embedded static assets
+│   └── view/                   # Templ components/pages
+├── migrations/                 # Atlas migrations used by mage migrate
+├── docs/                       # Development, API, architecture, deployment docs
+├── scripts/                    # systemd service and deployment scripts
+├── magefile.go                 # Build/dev/quality command definitions
+├── sqlc.yaml                   # SQLC configuration
+├── atlas.hcl                   # Atlas configuration
+└── .env.example                # Environment template
 ```
 
----
+## Development Workflow
 
-<p align="center">
-  <img src="https://github.com/dunamismax/images/blob/main/golang/gopher-aviator.jpg" alt="Go Gopher" width="400" />
-</p>
-
-## Ubuntu SystemD Deployment
+### Daily commands
 
 ```bash
-# Build optimized binary for production deployment
-mage build  # Creates optimized binary in bin/server (~15MB)
+mage dev          # Run with hot reload
+mage generate     # Regenerate SQLC + Templ + CSS
+mage quality      # vet + lint + vulncheck
+mage build        # Build production binary (bin/server)
+mage ci           # generate + fmt + quality + build
+```
 
-# Create systemd service file
+### Full command reference
+
+```bash
+mage help
+```
+
+### Clean and reset
+
+```bash
+mage clean        # Remove build artifacts and temp outputs
+mage reset        # Clean + regenerate + migrate for a fresh local state
+```
+
+## Configuration
+
+Runtime config is loaded in this order:
+1. Built-in defaults
+2. `.env` (if present)
+3. `config.yaml` / `config.yml` (optional)
+4. Environment variables
+
+Important settings (`.env`):
+
+```env
+APP_ENVIRONMENT=development
+APP_DEBUG=true
+APP_LOG_LEVEL=debug
+APP_LOG_FORMAT=text
+
+SERVER_PORT=8080
+
+DATABASE_URL=postgres://username:password@localhost:5432/gowebserver?sslmode=disable
+# or use DATABASE_USER / DATABASE_PASSWORD / DATABASE_HOST / DATABASE_PORT / DATABASE_NAME
+
+AUTH_COOKIE_NAME=auth_token
+AUTH_COOKIE_SECURE=false
+```
+
+For production, set:
+- `APP_ENVIRONMENT=production`
+- `APP_DEBUG=false`
+- `AUTH_COOKIE_SECURE=true`
+- restrictive `SECURITY_ALLOWED_ORIGINS`
+
+## HTTP Surface (Snapshot)
+
+Core routes currently registered:
+
+- `GET /` home page
+- `GET /demo` HTMX demo endpoint
+- `GET /health` health check
+- `GET|POST /auth/login` login
+- `GET|POST /auth/register` registration
+- `POST /auth/logout` logout
+- `GET /profile` authenticated profile page
+- `GET|POST|PUT|PATCH|DELETE /users...` user CRUD endpoints
+- `GET /api/users/count` API example endpoint
+
+## Security Model
+
+Implemented in current codebase:
+
+- Session-based authentication (`scs`) with PostgreSQL session store
+- Argon2id password hashing
+- CSRF middleware on state-changing requests
+- Input sanitization middleware
+- Security headers + CORS + rate limiting
+- Structured error responses and request correlation IDs
+
+Operational note:
+- `/profile` is authenticated.
+- The `/users` CRUD routes are currently not wrapped by auth middleware by default. Restrict these routes before internet-facing production deployment.
+
+## Deployment (Ubuntu + systemd)
+
+### Quick path
+
+```bash
+mage build
+sudo ./scripts/deploy.sh
+```
+
+`scripts/deploy.sh` installs to `/opt/gowebserver`, copies `.env`, installs `scripts/gowebserver.service`, and restarts the service.
+
+### Manual path
+
+```bash
+mage build
+sudo cp bin/server /opt/gowebserver/bin/
 sudo cp scripts/gowebserver.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable gowebserver
-sudo systemctl start gowebserver
+sudo systemctl restart gowebserver
+sudo systemctl status gowebserver
 ```
 
-The binary includes embedded Tailwind CSS, DaisyUI, HTMX, and Templ templates. **Single binary deployment** with local PostgreSQL backend. Perfect for traditional Ubuntu servers behind Caddy reverse proxy with Cloudflare DNS.
+## Documentation
 
-## Key Features Demonstrated
+- [Documentation Index](docs/README.md)
+- [Development Guide](docs/development.md)
+- [API Reference](docs/api.md)
+- [Architecture](docs/architecture.md)
+- [Security Guide](docs/security.md)
+- [Deployment Guide](docs/deployment.md)
+- [Ubuntu Deployment Guide](docs/ubuntu-deployment.md)
 
-**Modern Web Stack:**
+## Known Gaps
 
-- Echo framework with comprehensive middleware stack (recovery, CORS, rate limiting, timeouts)
-- Session-based authentication with Argon2id password hashing and PostgreSQL session store
-- Type-safe Templ templates with reusable components and embedded static assets
-- HTMX dynamic interactions with smooth page transitions and custom events
-- Tailwind CSS + DaisyUI styling with comprehensive component library and multiple themes
-- SQLC type-safe database queries with high-performance pgx driver and connection pooling
-- Structured logging with slog and configurable JSON/text output
+- Some docs still mention legacy JWT terminology; runtime auth in this codebase is session-based.
+- Feature flags for metrics/pprof exist in config, but dedicated production endpoints are not fully wired in current routes.
 
-**Developer Experience:**
+## Contributing
 
-- Hot reloading with Air for rapid development
-- Comprehensive error handling with custom error types and structured logging
-- Static analysis suite (golangci-lint, govulncheck, go vet)
-- Mage build automation with goimports, templ formatting, and vulnerability scanning
-- Single-command CI pipeline with quality checks and linting
-- Environment-based configuration with sensible defaults
-
-**Production Ready:**
-
-- Enterprise security with CSRF protection, input sanitization, and XSS/SQL injection prevention
-- Session-based authentication with Argon2id password hashing and PostgreSQL session store
-- Structured error handling with request tracing, correlation IDs, and monitoring
-- Multi-source configuration with Koanf supporting JSON, YAML, ENV, and .env files
-- Atlas declarative schema management with automatic migration generation
-- Single binary deployment (~15MB) with embedded assets (CSS, JS, templates)
-- Comprehensive middleware stack with rate limiting, CORS, security headers, and timeouts
-
----
-
-<p align="center">
-  <a href="https://buymeacoffee.com/dunamismax" target="_blank">
-    <img src="https://github.com/dunamismax/images/blob/main/golang/buy-coffee-go.gif" alt="Buy Me A Coffee" style="height: 150px !important;" />
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://twitter.com/dunamismax" target="_blank"><img src="https://img.shields.io/badge/Twitter-%231DA1F2.svg?&style=for-the-badge&logo=twitter&logoColor=white" alt="Twitter"></a>
-  <a href="https://bsky.app/profile/dunamismax.bsky.social" target="_blank"><img src="https://img.shields.io/badge/Bluesky-blue?style=for-the-badge&logo=bluesky&logoColor=white" alt="Bluesky"></a>
-  <a href="https://reddit.com/user/dunamismax" target="_blank"><img src="https://img.shields.io/badge/Reddit-%23FF4500.svg?&style=for-the-badge&logo=reddit&logoColor=white" alt="Reddit"></a>
-  <a href="https://discord.com/users/dunamismax" target="_blank"><img src="https://img.shields.io/badge/Discord-dunamismax-7289DA.svg?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://signal.me/#p/+dunamismax.66" target="_blank"><img src="https://img.shields.io/badge/Signal-dunamismax.66-3A76F0.svg?style=for-the-badge&logo=signal&logoColor=white" alt="Signal"></a>
-</p>
+1. Fork repository
+2. Create a focused branch
+3. Run `mage quality`
+4. Open a pull request with clear implementation notes
 
 ## License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
-
----
-
-<p align="center">
-  <strong>The Modern Go Stack</strong><br>
-  <sub>Echo • Templ • HTMX • Sessions • SQLC • PostgreSQL • pgx • Tailwind • DaisyUI • slog • Koanf • Atlas • Mage • Air</sub>
-</p>
-
-<p align="center">
-  <img src="https://github.com/dunamismax/images/blob/main/golang/gopher-running-jumping.gif" alt="Gopher Running and Jumping" width="600" />
-</p>
-
----
-
-"The "Modern Go Stack" is a powerful and elegant solution that aligns beautifully with Go's core principles. It is an excellent starting point for many new projects, and any decision to deviate from it should be driven by specific, demanding requirements." - Me
-
----
+Licensed under the [MIT License](LICENSE).
