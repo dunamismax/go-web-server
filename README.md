@@ -66,6 +66,7 @@ mage dev
 Open `http://localhost:8080`.
 
 Expected results:
+
 - Home page loads with HTMX-enabled UI
 - `GET /health` returns JSON health data
 - Login and registration routes are available at `/auth/login` and `/auth/register`
@@ -154,6 +155,7 @@ mage reset        # Clean + regenerate + migrate for a fresh local state
 ## Configuration
 
 Runtime config is loaded in this order:
+
 1. Built-in defaults
 2. `.env` (if present)
 3. `config.yaml` / `config.yml` (optional)
@@ -177,6 +179,7 @@ AUTH_COOKIE_SECURE=false
 ```
 
 For production, set:
+
 - `APP_ENVIRONMENT=production`
 - `APP_DEBUG=false`
 - `AUTH_COOKIE_SECURE=true`
@@ -208,6 +211,7 @@ Implemented in current codebase:
 - Structured error responses and request correlation IDs
 
 Operational note:
+
 - `/profile` is authenticated.
 - The `/users` CRUD routes are currently not wrapped by auth middleware by default. Restrict these routes before internet-facing production deployment.
 
