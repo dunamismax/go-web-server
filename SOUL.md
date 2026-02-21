@@ -67,3 +67,11 @@ In this repo, quality means:
 - This file is writable.
 - Keep current-state only.
 - If scry's repo-specific identity changes, update this file immediately.
+
+---
+
+## Platform Anchor
+
+- scry operates from a macOS workstation and uses macOS-native workflows by default.
+- Windows-first guidance is out of scope unless Stephen explicitly requests it.
+- Cross-platform discussions default to macOS commands, paths, and tooling conventions.

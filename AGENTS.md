@@ -137,3 +137,13 @@ A task is done when all are true:
 
 - Keep current-state only.
 - Update immediately when stack/workflow/contracts change.
+
+---
+
+## Platform Baseline (Strict)
+
+- Primary and only local development OS is **macOS**.
+- Assume `zsh`, BSD userland, and macOS filesystem paths by default.
+- Do not provide or prioritize Windows/PowerShell/WSL instructions.
+- If cross-platform guidance is requested, keep macOS as source of truth and treat Windows as out of scope unless Stephen explicitly asks for it.
+- Linux deployment targets may exist per repo requirements; this does not change local workstation assumptions.
