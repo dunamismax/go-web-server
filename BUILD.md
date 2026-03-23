@@ -2,8 +2,8 @@
 
 **This is the primary operational handoff document for `go-web-server`. It is a living document. Every future agent or developer who touches this repository is responsible for keeping it accurate, current, and up to date. If you verify, break, fix, rename, add, or remove anything that affects setup, build, runtime, deployment, testing, migrations, or source-of-truth ownership, update this file in the same change.**
 
-Last reviewed: 2026-03-18  
-Reviewer: Codex  
+Last reviewed: 2026-03-23
+Reviewer: Claude
 Repository: `/Users/sawyer/github/go-web-server`
 
 ## 1. Project Baseline
@@ -344,6 +344,63 @@ Checklist:
 - [ ] remove dead JWT or unused config surfaces if they are not part of the product
 - [ ] keep deployment helpers honest about generated assets and migration expectations
 - [ ] preserve one-binary boring-default operator ergonomics
+
+### Phase 4 — tech stack alignment
+
+**Status:** planned
+
+The Go full-stack and backend tech stacks define the canonical choices for this workspace. This phase closes the gaps between what those stacks specify and what the repo currently implements.
+
+**HTTP layer**
+
+The tech stack defaults to `net/http` with explicit middleware and says to reach for `chi` only when route grouping and middleware composition become materially easier. It explicitly lists "reflection-driven web frameworks" under "Avoid By Default". The repo currently uses Echo, which is a reflection-heavy framework.
+
+- [ ] Replace Echo with `net/http` and `chi`; wire middleware explicitly as the tech stack describes
+- [ ] Migrate all route definitions in `internal/handler/routes.go` to `chi` router groups
+- [ ] Replace Echo-specific middleware (`echomiddleware.*`) with stdlib or `chi`-compatible equivalents
+- [ ] Remove `github.com/labstack/echo/v4` and `github.com/labstack/gommon` from `go.mod`
+
+**Migrations**
+
+The tech stack specifies `goose` as the default migration tool. The repo uses Atlas CLI, which was not installed in the review environment and adds external dependency friction. There is already a legacy `internal/store/migrations/` directory with goose-style files.
+
+- [ ] Replace Atlas with `goose` as the canonical migration tool
+- [ ] Add `github.com/pressly/goose/v3` to `go.mod`
+- [ ] Convert top-level `migrations/` Atlas files to goose-compatible `.sql` files with `-- +goose Up` / `-- +goose Down` markers
+- [ ] Remove `atlas.hcl` and the Atlas CLI dependency from `magefile.go` and docs
+- [ ] Delete `internal/store/migrations/` after verifying the goose migration set is complete
+- [ ] Update `mage migrate` and `mage migrateStatus` targets to use `goose` instead of `atlas`
+- [ ] Update `cmd/web/main.go` and `internal/store/store.go` to run goose migrations at startup or as an explicit CLI flag
+
+**Observability**
+
+The tech stack requires a `/metrics` Prometheus endpoint and `pprof` on an admin-only path as part of the observability baseline. Both are stubbed in config but never wired.
+
+- [ ] Add `github.com/prometheus/client_golang` to `go.mod`
+- [ ] Wire a `/metrics` handler when `features.enable_metrics` is true, or remove the config field and make the endpoint always-on
+- [ ] Wire `net/http/pprof` handlers on an admin-only path (e.g. `/debug/pprof/`) when `features.enable_pprof` is true, or always-on behind a localhost check
+- [ ] Add structured log fields at startup confirming which observability surfaces are active
+
+**CI security scan**
+
+The tech stack requires `govulncheck` in CI. It exists in Mage as `mage vulnCheck` but the CI workflow does not call it.
+
+- [ ] Add a `govulncheck ./...` step to `.github/workflows/ci.yml`
+
+**CSS dependencies**
+
+The tech stack defaults to hand-written CSS or Tailwind CSS v4 via the standalone CLI. The repo adds DaisyUI and Pico CSS on top of Tailwind.
+
+- [ ] Decide whether DaisyUI and Pico CSS are intentional product choices or incidental pull-ins
+- [ ] If incidental, remove them from `package.json` and `tailwind.config.js` and replace any component usage with plain Tailwind utility classes or hand-written CSS
+
+Exit criteria:
+
+- HTTP layer is `net/http` plus `chi` with no Echo dependency in `go.mod`
+- `goose` is the only migration tool; Atlas and the legacy migration directory are gone
+- `/metrics` and `/debug/pprof` are wired and documented, or the config fields that claim to enable them are removed
+- `govulncheck` runs in CI
+- CSS dependency list matches what the tech stack specifies
 
 ## 6. Next-Pass Priorities
 
