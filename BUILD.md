@@ -291,7 +291,61 @@ Important: some build/release paths rely on these files already being current.
 - Docker/GoReleaser rely on committed generated assets being current
 - `mage ci` includes `Fmt`, which mutates the working tree; that is unusual for CI-style validation
 
-## 5. Next-Pass Priorities
+## 5. Phase Dashboard
+
+### Phase 0 — starter app foundation
+
+**Status:** done / checked
+
+Checklist:
+
+- [x] server-rendered Go app exists with Echo, Templ, HTMX, PostgreSQL, SQLC, and Mage
+- [x] auth routes and `/users` CRUD exist
+- [x] CSS build path works
+- [x] core build/test/vet/lint paths are green in this environment
+- [x] BUILD records what was and was not actually verified
+
+### Phase 1 — source-of-truth and schema consolidation
+
+**Status:** in progress
+
+Checklist:
+
+- [ ] resolve whether top-level `migrations/` is the only canonical migration history
+- [ ] decide whether `internal/store/migrations/` is deleted, archived, or explicitly legacy
+- [ ] decide whether startup keeps `InitSchema()` bootstrap behavior or moves to Atlas-only expectations
+- [ ] align Mage, Docker, and GoReleaser around one generation and asset-build story
+
+Exit criteria:
+
+- one migration story is canonical
+- one schema source of truth is canonical
+- generation/build/release paths no longer depend on undocumented assumptions
+
+### Phase 2 — DB-backed runtime verification
+
+**Status:** planned
+
+Checklist:
+
+- [ ] boot the app successfully against a live PostgreSQL instance
+- [ ] verify `/health` against a live DB
+- [ ] verify register/login/logout end to end
+- [ ] verify protected `/users` CRUD end to end
+- [ ] add at least one real DB-backed integration path to the automated suite
+
+### Phase 3 — product hardening
+
+**Status:** planned
+
+Checklist:
+
+- [ ] either wire metrics/pprof for real or remove misleading config claims
+- [ ] remove dead JWT or unused config surfaces if they are not part of the product
+- [ ] keep deployment helpers honest about generated assets and migration expectations
+- [ ] preserve one-binary boring-default operator ergonomics
+
+## 6. Next-Pass Priorities
 
 ### Highest impact, dependency-ordered
 
@@ -325,7 +379,7 @@ Completed in this pass:
 - Remove dead JWT/metrics/pprof config if the app will stay session-only and minimal
 - Align Docker, Mage, and GoReleaser so they all build from the same generation assumptions
 
-## 6. Next-Agent Checklist
+## 7. Next-Agent Checklist
 
 Follow this order to minimize confusion:
 
@@ -376,7 +430,7 @@ Follow this order to minimize confusion:
     - `/users` CRUD
 14. If you touch schema or migrations, update this file before finishing.
 
-## 7. Short Truth Summary
+## 8. Short Truth Summary
 
 If you need the shortest honest summary before working:
 
