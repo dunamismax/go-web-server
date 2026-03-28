@@ -234,6 +234,12 @@ func Vet() error {
 	return sh.RunV("go", "vet", "./...")
 }
 
+// Test runs the Go test suite
+func Test() error {
+	fmt.Println("Running go test...")
+	return sh.RunV("go", "test", "./...")
+}
+
 // VulnCheck scans for known vulnerabilities
 func VulnCheck() error {
 	fmt.Println("Running vulnerability check...")
@@ -494,17 +500,17 @@ func MigrateStatus() error {
 	return sh.RunV("atlas", "migrate", "status", "--env", "dev")
 }
 
-// CI runs the complete CI pipeline
+// CI runs the complete non-mutating local CI pipeline
 func CI() error {
 	fmt.Println("Running complete CI pipeline...")
-	mg.SerialDeps(Generate, Fmt, Vet, Lint, Build, showBuildInfo)
+	mg.SerialDeps(Generate, Vet, Test, Lint, VulnCheck, buildServer, showBuildInfo)
 	return nil
 }
 
-// Quality runs all quality checks
+// Quality runs the main quality checks
 func Quality() error {
 	fmt.Println("Running all quality checks...")
-	mg.Deps(Vet, Lint, VulnCheck)
+	mg.Deps(Vet, Test, Lint, VulnCheck)
 	return nil
 }
 
@@ -560,16 +566,17 @@ Database:
 Quality:
   mage fmt (f)          Format code with goimports and tidy modules
   mage vet (v)          Run go vet static analysis
+  mage test (t)         Run go test ./...
   mage lint (l)         Run golangci-lint comprehensive linting
   mage vulncheck (vc)   Check for security vulnerabilities
-  mage quality (q)      Run all quality checks (vet + lint + vulncheck)
+  mage quality (q)      Run main quality checks (vet + test + lint + vulncheck)
 
 Release:
   mage release          Create and publish release using GoReleaser
   mage snapshot         Build snapshot release using GoReleaser (no publishing)
 
 Production:
-  mage ci               Complete CI pipeline (generate + fmt + quality + build)
+  mage ci               Complete CI pipeline (generate + vet + test + lint + vulncheck + build)
   mage clean (c)        Clean build artifacts and temporary files
   mage reset            Reset repository to fresh state (clean + reset database + regenerate)
 
@@ -611,6 +618,7 @@ var Aliases = map[string]interface{}{
 	"g":  Generate,
 	"f":  Fmt,
 	"v":  Vet,
+	"t":  Test,
 	"l":  Lint,
 	"vc": VulnCheck,
 	"r":  Run,

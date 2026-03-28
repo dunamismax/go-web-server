@@ -72,8 +72,9 @@ See:
 | `mage generate` | Regenerate SQLC, Templ, and CSS output |
 | `mage fmt` | Format Go and Templ files and tidy modules |
 | `mage vet` | Run `go vet ./...` |
+| `mage test` | Run `go test ./...` |
 | `mage lint` | Run `golangci-lint` |
-| `mage quality` | Run vet, lint, and `govulncheck` |
+| `mage quality` | Run vet, test, lint, and `govulncheck` |
 | `mage ci` | Run the main local CI pipeline |
 | `mage build` | Build `bin/server` |
 
@@ -93,6 +94,12 @@ mage migrateStatus
 
 `mage migrateDown` does not roll back changes. It prints guidance only.
 
+## Generated Files and Assets
+
+Generated artifacts are checked in for reproducible builds and releases. After changing SQL, Templ views, or CSS source, run `mage generate` and commit the resulting updates.
+
+CI reruns `mage generate` and fails if tracked generated files or built assets drift.
+
 ## What Requires Regeneration
 
 Run `mage generate` after changing:
@@ -103,14 +110,21 @@ Run `mage generate` after changing:
 
 ## Verification
 
-For code changes in handlers, middleware, store, or views, the minimum useful checks are:
+For most code changes, the baseline checks are:
 
 ```bash
-mage vet
-mage lint
+go build ./...
+go vet ./...
 go test ./...
 ```
 
-The repo currently has light automated test coverage, so linting, vetting, and manual UI checks still matter.
+Useful repo-native follow-ups:
+
+```bash
+mage lint
+npm run build-css
+```
 
 If Atlas is part of the change, also run `mage migrateStatus`.
+
+The repo still has light automated coverage, so manual UI checks remain important when you touch auth, sessions, or the `/users` flow.
