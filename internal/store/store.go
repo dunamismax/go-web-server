@@ -3,12 +3,27 @@ package store
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+//go:embed schema.sql
+var canonicalSchemaSQL string
+
+const legacyBootstrapReconciliationSQL = `
+	-- Legacy reconciliation for older local databases created before password hashes were required.
+	ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+	UPDATE users
+	SET password_hash = 'account-disabled-no-password',
+		is_active = false,
+		updated_at = CURRENT_TIMESTAMP
+	WHERE password_hash IS NULL;
+	ALTER TABLE users ALTER COLUMN password_hash SET NOT NULL;
+`
 
 // Store provides all functions to execute db queries.
 type Store struct {
@@ -97,50 +112,12 @@ func (s *Store) WithTx(tx pgx.Tx) *Store {
 	}
 }
 
-// InitSchema initializes the database schema using the schema.sql file.
+// InitSchema initializes the database schema using the canonical schema.sql file.
 // This is kept here for compatibility, but migrations are preferred.
 func (s *Store) InitSchema(ctx context.Context) error {
-	schema := `
-		-- Users table
-		CREATE TABLE IF NOT EXISTS users (
-			id BIGSERIAL PRIMARY KEY,
-			email VARCHAR(255) UNIQUE NOT NULL,
-			name VARCHAR(255) NOT NULL,
-			avatar_url VARCHAR(512),
-			bio TEXT,
-			password_hash TEXT NOT NULL,
-			is_active BOOLEAN DEFAULT true,
-			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-		);
+	bootstrapSQL := canonicalSchemaSQL + "\n" + legacyBootstrapReconciliationSQL
 
-		ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
-		UPDATE users
-		SET password_hash = 'account-disabled-no-password',
-			is_active = false,
-			updated_at = CURRENT_TIMESTAMP
-		WHERE password_hash IS NULL;
-		ALTER TABLE users ALTER COLUMN password_hash SET NOT NULL;
-
-		-- Index for faster email lookups
-		CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-
-		-- Index for active users
-		CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active);
-
-		-- Sessions table for SCS
-		CREATE TABLE IF NOT EXISTS sessions (
-			token TEXT PRIMARY KEY,
-			data BYTEA NOT NULL,
-			expiry TIMESTAMPTZ NOT NULL
-		);
-
-		-- Index for session expiry cleanup
-		CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expiry);
-	`
-
-	_, err := s.db.Exec(ctx, schema)
-	if err != nil {
+	if _, err := s.db.Exec(ctx, bootstrapSQL); err != nil {
 		return fmt.Errorf("failed to initialize schema: %w", err)
 	}
 

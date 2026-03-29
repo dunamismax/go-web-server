@@ -240,6 +240,12 @@ func Test() error {
 	return sh.RunV("go", "test", "./...")
 }
 
+// Smoke runs the Docker-backed runtime smoke check.
+func Smoke() error {
+	fmt.Println("Running runtime smoke check...")
+	return sh.RunV("./scripts/runtime-smoke.sh")
+}
+
 // VulnCheck scans for known vulnerabilities
 func VulnCheck() error {
 	fmt.Println("Running vulnerability check...")
@@ -567,6 +573,7 @@ Quality:
   mage fmt (f)          Format code with goimports and tidy modules
   mage vet (v)          Run go vet static analysis
   mage test (t)         Run go test ./...
+  mage smoke            Run Docker-backed runtime smoke validation
   mage lint (l)         Run golangci-lint comprehensive linting
   mage vulncheck (vc)   Check for security vulnerabilities
   mage quality (q)      Run main quality checks (vet + test + lint + vulncheck)

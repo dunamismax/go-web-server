@@ -58,3 +58,6 @@ jobs:
 
       - name: Run Build
         run: go build ./...
+
+      - name: Run Runtime Smoke Check
+        run: ./scripts/runtime-smoke.sh

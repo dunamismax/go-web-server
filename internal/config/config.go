@@ -2,6 +2,7 @@
 package config
 
 import (
+	"bufio"
 	"log/slog"
 	"net"
 	"net/url"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/knadh/koanf/parsers/dotenv"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/confmap"
 	"github.com/knadh/koanf/providers/env"
@@ -82,8 +82,15 @@ func New() *Config {
 	}
 
 	// Try to read .env file first
-	if err := k.Load(file.Provider(".env"), dotenv.Parser()); err != nil {
+	if _, err := os.Stat(".env"); err != nil {
+		if !os.IsNotExist(err) {
+			slog.Error("failed to stat .env file", "error", err)
+			os.Exit(1)
+		}
 		slog.Debug("no .env file found")
+	} else if err := loadDotEnvFile(k, ".env"); err != nil {
+		slog.Error("failed to load .env file", "error", err)
+		os.Exit(1)
 	} else {
 		slog.Debug("loaded .env file")
 	}
@@ -103,10 +110,7 @@ func New() *Config {
 	}
 
 	// Environment variable handling
-	if err := k.Load(env.Provider("", ".", func(s string) string {
-		// Convert environment variables to lowercase and replace _ with .
-		return strings.ReplaceAll(strings.ToLower(s), "_", ".")
-	}), nil); err != nil {
+	if err := k.Load(env.Provider("", ".", envKeyToKoanfKey), nil); err != nil {
 		slog.Error("failed to load environment configuration", "error", err)
 		os.Exit(1)
 	}
@@ -209,6 +213,63 @@ func setDefaults(k *koanf.Koanf) error {
 
 	// Load defaults using the confmap provider
 	return k.Load(confmap.Provider(defaults, "."), nil)
+}
+
+func loadDotEnvFile(k *koanf.Koanf, path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	defer file.Close()
+
+	values := map[string]interface{}{}
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		if strings.HasPrefix(line, "export ") {
+			line = strings.TrimSpace(strings.TrimPrefix(line, "export "))
+		}
+
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		key := envKeyToKoanfKey(strings.TrimSpace(parts[0]))
+		value := strings.TrimSpace(parts[1])
+		if len(value) >= 2 {
+			if (strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`)) ||
+				(strings.HasPrefix(value, `'`) && strings.HasSuffix(value, `'`)) {
+				value = value[1 : len(value)-1]
+			}
+		}
+
+		values[key] = value
+	}
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+	if len(values) == 0 {
+		return nil
+	}
+
+	return k.Load(confmap.Provider(values, "."), nil)
+}
+
+func envKeyToKoanfKey(s string) string {
+	key := strings.ToLower(strings.TrimSpace(s))
+	parts := strings.SplitN(key, "_", 2)
+	if len(parts) == 2 {
+		return parts[0] + "." + parts[1]
+	}
+	return key
 }
 
 // GetLogLevel converts the string log level to slog.Level.

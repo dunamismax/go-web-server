@@ -10,7 +10,7 @@
 - CSRF protection, security headers, request IDs, rate limiting, and structured errors
 - Mage tasks for setup, generation, formatting, linting, testing, building, and release work
 - Atlas migrations plus a schema bootstrap path for fresh local bring-up
-- CI that regenerates derived files and verifies build, vet, test, lint, and vulnerability checks
+- CI that regenerates derived files and verifies build, vet, test, lint, vulnerability checks, and a Docker-backed runtime smoke flow
 
 ## What You Do Not Get
 
@@ -55,6 +55,12 @@ mage dev
 
 Use `mage run` if you want a plain build-and-run without Air.
 
+5. Optional but recommended: run the Docker-backed runtime smoke check to prove the starter boots, registers a user, and reaches protected pages end to end:
+
+```bash
+mage smoke
+```
+
 The app listens on [http://localhost:8080](http://localhost:8080). Open [http://localhost:8080/auth/register](http://localhost:8080/auth/register) to create the first account.
 
 ## Common Commands
@@ -68,6 +74,7 @@ The app listens on [http://localhost:8080](http://localhost:8080). Open [http://
 | `mage fmt` | Format Go and Templ files and tidy modules |
 | `mage vet` | Run `go vet ./...` |
 | `mage test` | Run `go test ./...` |
+| `mage smoke` | Run the Docker-backed runtime smoke validation |
 | `mage lint` | Run `golangci-lint` |
 | `mage quality` | Run vet, test, lint, and `govulncheck` |
 | `mage ci` | Run the main local CI-style pipeline |
@@ -93,6 +100,12 @@ mage lint
 npm run build-css
 ```
 
+For real starter bring-up confidence, run the runtime smoke check when Docker is available:
+
+```bash
+./scripts/runtime-smoke.sh
+```
+
 `mage ci` now mirrors the main local validation flow without calling the formatting target.
 
 ## Documentation
@@ -111,9 +124,9 @@ npm run build-css
 - The canonical Atlas migration directory is top-level [`migrations/`](migrations/).
 - The duplicate `internal/store/migrations/` directory is legacy history, not the source of truth.
 - [`internal/store/schema.sql`](internal/store/schema.sql) is the schema source used for SQLC and Atlas.
-- The app still keeps a startup bootstrap path in [`internal/store/store.go`](internal/store/store.go) so a fresh local database can boot before explicit Atlas migration work.
+- The app still keeps a startup bootstrap path in [`internal/store/store.go`](internal/store/store.go), but it now executes the canonical [`internal/store/schema.sql`](internal/store/schema.sql) before applying a small legacy reconciliation patch for older local databases.
 - Generated files and built frontend assets are checked in. CI runs `mage generate` and fails if that changes tracked files.
-- Local runtime verification still depends on a reachable PostgreSQL instance and Atlas CLI when you want explicit migration state checks.
+- [`scripts/runtime-smoke.sh`](scripts/runtime-smoke.sh) is the current end-to-end starter validation path. It uses `DATABASE_URL` when provided or starts a local PostgreSQL container with Docker when it is not.
 - Leave `security.trusted_proxies` empty unless the app is actually behind reverse proxies you control.
 - `package-lock.json` is tracked so frontend dependency resolution stays reproducible across contributors and CI.
 

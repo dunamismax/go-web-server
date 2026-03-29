@@ -23,7 +23,7 @@ This docs set stays close to the repo that exists today. Start with the developm
 - Top-level [`migrations/`](../migrations/) is the canonical Atlas migration directory.
 - [`internal/store/migrations/`](../internal/store/migrations/) is legacy history and should not be used as the source of truth.
 - Generated code and built frontend assets are checked in. Run `mage generate` after source changes and commit the resulting artifacts.
-- CI reruns generation and fails if tracked generated files drift.
+- CI reruns generation, fails if tracked generated files drift, and runs a Docker-backed runtime smoke check.
 
 ## Naming Note
 

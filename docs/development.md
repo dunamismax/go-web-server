@@ -46,6 +46,12 @@ mage dev
 
 Use `mage run` if you want a plain build-and-run without Air.
 
+7. Optional but recommended: prove the starter flow end to end with the Docker-backed runtime smoke check:
+
+```bash
+mage smoke
+```
+
 ## Configuration Sources
 
 Configuration loads in this order:
@@ -73,6 +79,7 @@ See:
 | `mage fmt` | Format Go and Templ files and tidy modules |
 | `mage vet` | Run `go vet ./...` |
 | `mage test` | Run `go test ./...` |
+| `mage smoke` | Run the Docker-backed runtime smoke validation |
 | `mage lint` | Run `golangci-lint` |
 | `mage quality` | Run vet, test, lint, and `govulncheck` |
 | `mage ci` | Run the main local CI pipeline |
@@ -81,6 +88,7 @@ See:
 ## Database Workflow
 
 - The app calls [`store.InitSchema()`](../internal/store/store.go) on startup, so a fresh local database can boot even if you have not run Atlas yet.
+- That bootstrap path now executes the canonical [`internal/store/schema.sql`](../internal/store/schema.sql) first, then applies a small compatibility patch for older local databases that predate `password_hash` enforcement.
 - The canonical schema file is [`internal/store/schema.sql`](../internal/store/schema.sql).
 - The canonical migration directory is [`migrations/`](../migrations/).
 - [`internal/store/migrations/`](../internal/store/migrations/) still exists as legacy history and should not be treated as the source of truth.
@@ -123,6 +131,12 @@ Useful repo-native follow-ups:
 ```bash
 mage lint
 npm run build-css
+```
+
+When Docker is available, also run the runtime smoke check for real starter verification:
+
+```bash
+./scripts/runtime-smoke.sh
 ```
 
 If Atlas is part of the change, also run `mage migrateStatus`.
