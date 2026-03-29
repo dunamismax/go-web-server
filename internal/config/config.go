@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -215,15 +216,21 @@ func setDefaults(k *koanf.Koanf) error {
 	return k.Load(confmap.Provider(defaults, "."), nil)
 }
 
-func loadDotEnvFile(k *koanf.Koanf, path string) error {
-	file, err := os.Open(path)
+func loadDotEnvFile(k *koanf.Koanf, path string) (err error) {
+	cleanPath := filepath.Clean(path)
+	// #nosec G304 -- the path is limited to the caller-selected local .env location or a test temp file.
+	file, err := os.Open(cleanPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
 
 	values := map[string]interface{}{}
 	scanner := bufio.NewScanner(file)
