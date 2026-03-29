@@ -64,7 +64,7 @@ wait_for_http() {
 }
 
 extract_csrf_token() {
-  awk 'BEGIN { IGNORECASE = 1 } /^X-CSRF-Token:/ { gsub(/\r/, "", $2); print $2 }' "$1" | tail -n 1
+  grep -i '^X-CSRF-Token:' "$1" | awk '{gsub(/\r/, "", $2); print $2}' | tail -n 1
 }
 
 require_command curl
@@ -175,10 +175,23 @@ if [[ "${users_status}" != "200" ]]; then
   exit 1
 fi
 
-if ! grep -q "${REGISTER_EMAIL}" "${WORK_DIR}/users.html"; then
-  echo "users page did not include registered email ${REGISTER_EMAIL}" >&2
-  cat "${WORK_DIR}/users.html" >&2 || true
+users_list_status="$(curl -sS \
+  -o "${WORK_DIR}/users-list.html" \
+  -w '%{http_code}' \
+  -b "${COOKIE_JAR}" \
+  -H 'HX-Request: true' \
+  "${BASE_URL}/users/list")"
+if [[ "${users_list_status}" != "200" ]]; then
+  echo "users list request failed with status ${users_list_status}" >&2
+  cat "${WORK_DIR}/users-list.html" >&2 || true
+  cat "${APP_LOG}" >&2 || true
   exit 1
 fi
 
-echo "runtime smoke passed: registration, session auth, protected pages, and database-backed health all succeeded"
+if ! grep -q "${REGISTER_EMAIL}" "${WORK_DIR}/users-list.html"; then
+  echo "users list did not include registered email ${REGISTER_EMAIL}" >&2
+  cat "${WORK_DIR}/users-list.html" >&2 || true
+  exit 1
+fi
+
+echo "runtime smoke passed: registration, session auth, protected pages, HTMX user list, and database-backed health all succeeded"
