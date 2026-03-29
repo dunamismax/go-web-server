@@ -64,7 +64,7 @@ These routes require an authenticated session.
   "status": "ok",
   "timestamp": "2026-03-07T15:04:05Z",
   "service": "go-web-server",
-  "version": "1.0.0",
+  "version": "4.0.0",
   "uptime": "12m3s",
   "checks": {
     "database": "ok",

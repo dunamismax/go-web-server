@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dunamismax/go-web-server/internal/buildinfo"
 	"github.com/dunamismax/go-web-server/internal/middleware"
 	"github.com/dunamismax/go-web-server/internal/store"
 	"github.com/dunamismax/go-web-server/internal/view"
@@ -98,7 +99,7 @@ func (h *HomeHandler) Health(c echo.Context) error {
 		"status":    overallStatus,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 		"service":   "go-web-server",
-		"version":   "1.0.0",
+		"version":   buildinfo.Version,
 		"uptime":    time.Since(startTime).String(),
 		"checks":    checks,
 	}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/alexedwards/scs/pgxstore"
 	"github.com/alexedwards/scs/v2"
+	"github.com/dunamismax/go-web-server/internal/buildinfo"
 	"github.com/dunamismax/go-web-server/internal/config"
 	"github.com/dunamismax/go-web-server/internal/handler"
 	"github.com/dunamismax/go-web-server/internal/middleware"
@@ -30,6 +31,10 @@ import (
 //go:generate sh -c "cd ../../ && sqlc generate"
 
 func main() {
+	if handleVersionCommand(os.Args[1:]) {
+		return
+	}
+
 	// Load configuration
 	cfg := config.New()
 
@@ -48,7 +53,7 @@ func main() {
 	slog.SetDefault(logger)
 
 	slog.Info("Starting Go Web Server",
-		"version", "1.0.0",
+		"version", buildinfo.Version,
 		"environment", cfg.App.Environment,
 		"go_version", "1.26+",
 		"port", cfg.Server.Port,
@@ -264,6 +269,20 @@ func main() {
 	}
 
 	slog.Info("Server shutdown complete")
+}
+
+func handleVersionCommand(args []string) bool {
+	if len(args) == 0 {
+		return false
+	}
+
+	switch args[0] {
+	case "--version", "version":
+		fmt.Printf("server %s\n", buildinfo.Version)
+		return true
+	default:
+		return false
+	}
 }
 
 func configureIPExtractor(trustedProxies []string) (echo.IPExtractor, error) {

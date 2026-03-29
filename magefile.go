@@ -83,7 +83,7 @@ func buildServer() error {
 		return fmt.Errorf("failed to create build directory: %w", err)
 	}
 
-	ldflags := "-s -w -X main.version=1.0.0 -X main.buildTime=" + getCurrentTime()
+	ldflags := "-s -w -X github.com/dunamismax/go-web-server/internal/buildinfo.Version=4.0.0 -X github.com/dunamismax/go-web-server/internal/buildinfo.Date=" + getCurrentTime()
 	binaryPath := filepath.Join(buildDir, binaryName)
 
 	// Add .exe extension on Windows

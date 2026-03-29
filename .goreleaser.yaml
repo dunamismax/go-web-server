@@ -16,10 +16,10 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w 
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
+      - -s -w
+      - -X github.com/dunamismax/go-web-server/internal/buildinfo.Version={{.Version}}
+      - -X github.com/dunamismax/go-web-server/internal/buildinfo.Commit={{.Commit}}
+      - -X github.com/dunamismax/go-web-server/internal/buildinfo.Date={{.Date}}
     env:
       - CGO_ENABLED=0
     goos:
