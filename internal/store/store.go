@@ -112,6 +112,26 @@ func (s *Store) WithTx(tx pgx.Tx) *Store {
 	}
 }
 
+// DeactivateUserChecked deactivates a user and reports whether a row was updated.
+func (s *Store) DeactivateUserChecked(ctx context.Context, id int64) (bool, error) {
+	tag, err := s.db.Exec(ctx, deactivateUser, id)
+	if err != nil {
+		return false, err
+	}
+
+	return tag.RowsAffected() > 0, nil
+}
+
+// DeleteUserChecked deletes a user and reports whether a row was removed.
+func (s *Store) DeleteUserChecked(ctx context.Context, id int64) (bool, error) {
+	tag, err := s.db.Exec(ctx, deleteUser, id)
+	if err != nil {
+		return false, err
+	}
+
+	return tag.RowsAffected() > 0, nil
+}
+
 // InitSchema initializes the database schema using the canonical schema.sql file.
 // This is kept here for compatibility, but migrations are preferred.
 func (s *Store) InitSchema(ctx context.Context) error {

@@ -63,6 +63,7 @@ func RegisterRoutes(e *echo.Echo, handlers *Handlers) error {
 	users := e.Group("/users", requireAuth)
 	users.GET("", handlers.User.Users)
 	users.GET("/list", handlers.User.UserList)
+	users.GET("/count", handlers.User.UserCountFragment)
 	users.GET("/form", handlers.User.UserForm)
 	users.GET("/:id/edit", handlers.User.EditUserForm)
 	users.POST("", handlers.User.CreateUser)
@@ -71,8 +72,20 @@ func RegisterRoutes(e *echo.Echo, handlers *Handlers) error {
 	users.DELETE("/:id", handlers.User.DeleteUser)
 
 	// API routes
-	api := e.Group("/api", requireAuth)
-	api.GET("/users/count", handlers.User.UserCount)
+	apiAuth := e.Group("/api/auth")
+	apiAuth.GET("/state", handlers.Auth.AuthState)
+	apiAuth.POST("/login", handlers.Auth.LoginAPI)
+	apiAuth.POST("/register", handlers.Auth.RegisterAPI)
+	apiAuth.POST("/logout", handlers.Auth.LogoutAPI)
+
+	apiUsers := e.Group("/api/users", requireAuth)
+	apiUsers.GET("", handlers.User.ListUsersAPI)
+	apiUsers.GET("/count", handlers.User.UserCountAPI)
+	apiUsers.GET("/:id", handlers.User.GetUserAPI)
+	apiUsers.POST("", handlers.User.CreateUserAPI)
+	apiUsers.PUT("/:id", handlers.User.UpdateUserAPI)
+	apiUsers.PATCH("/:id/deactivate", handlers.User.DeactivateUserAPI)
+	apiUsers.DELETE("/:id", handlers.User.DeleteUserAPI)
 
 	return nil
 }

@@ -28,7 +28,7 @@ templ UsersContent() {
 		<div class="grid">
 			<div>
 				<p>
-					<strong>Users:</strong> <span id="user-count" hx-get="/api/users/count" hx-trigger="load, userCreated from:body, userDeleted from:body, userDeactivated from:body">-</span>
+					<strong>Users:</strong> <span id="user-count" hx-get="/users/count" hx-trigger="load, userCreated from:body, userDeleted from:body, userDeactivated from:body">-</span>
 				</p>
 			</div>
 			<div style="text-align: right;">

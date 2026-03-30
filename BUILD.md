@@ -46,6 +46,10 @@ Public:
 - `/auth/login`
 - `/auth/register`
 - `/auth/logout`
+- `/api/auth/state`
+- `/api/auth/login`
+- `/api/auth/register`
+- `/api/auth/logout`
 - `/static/*`
 
 Authenticated:
@@ -53,18 +57,25 @@ Authenticated:
 - `/profile`
 - `/users`
 - `/users/list`
+- `/users/count`
 - `/users/form`
 - `/users/:id/edit`
 - `/users` `POST`
 - `/users/:id` `PUT`
 - `/users/:id/deactivate` `PATCH`
 - `/users/:id` `DELETE`
+- `/api/users`
 - `/api/users/count`
+- `/api/users/:id`
+- `/api/users` `POST`
+- `/api/users/:id` `PUT`
+- `/api/users/:id/deactivate` `PATCH`
+- `/api/users/:id` `DELETE`
 
 ### Current-state truths that must not get lost
 
-- auth, profile, and user CRUD flows are still tightly coupled to Templ and HTMX response shapes
-- `/api/users/count` is still not a real JSON API contract. It renders an HTML fragment
+- the shipped browser path for auth, profile, and user CRUD is still tightly coupled to Templ and HTMX response shapes
+- Phase 2 now adds parallel JSON contracts under `/api/*` for auth state and managed-user operations
 - session cookies are already same-origin friendly and protected by CSRF middleware
 - generated backend artifacts and built frontend assets are currently checked in
 - local development still needs Node/npm for legacy CSS generation even though `web/` is Bun-based
@@ -152,13 +163,13 @@ Backend responsibilities after migration:
   - [x] The current Templ frontend still exists as the shipped browser path.
   - [x] The staged frontend can boot as a migration shell and is wired to reach backend health through the frontend proxy.
 
-- [ ] **Phase 2 - Normalize backend contracts**
-  - [ ] Explicit frontend-facing contracts exist for auth state, user list, create, edit, deactivate, delete, and count.
-  - [ ] `/api/*` naming reflects reality.
-    - `/api/users/count` still returns an HTML fragment today.
+- [x] **Phase 2 - Normalize backend contracts**
+  - [x] Explicit frontend-facing contracts exist for auth state, user list, create, edit, deactivate, delete, and count.
+  - [x] `/api/*` naming reflects reality.
+    - `/api/users/count` now returns JSON and the legacy HTML fragment moved to `/users/count`.
   - [x] Current CSRF expectations are documented for browser requests in `docs/api.md`.
-  - [ ] Endpoint docs are complete enough that later frontend agents can work without reading Templ templates or handler code.
-    - `docs/api.md` still mostly documents page and HTMX fragment behavior, not a stable Astro/Vue contract.
+  - [x] Endpoint docs are complete enough that later frontend agents can work without reading Templ templates or handler code.
+    - `docs/api.md` now documents the Phase 2 JSON contract surface and the remaining legacy routes explicitly.
 
 - [ ] **Phase 3 - Port the app shell and auth flows**
   - [x] A staged Astro layout, page shell, and Vue status card exist in `web/`.
@@ -193,7 +204,7 @@ Backend responsibilities after migration:
 
 - [x] Phase 0
 - [x] Phase 1
-- [ ] Phase 2
+- [x] Phase 2
 - [ ] Phase 3
 - [ ] Phase 4
 - [ ] Parity pass against current behavior

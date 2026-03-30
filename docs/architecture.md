@@ -13,17 +13,21 @@ Browser
 
 The repo is a small monolith. There is one binary, one Postgres database, and one main demo domain model: users. Phase 1 of the frontend migration adds a staged Astro + Vue + Bun workspace under `web/`, but the shipped browser path is still the legacy Templ + HTMX app.
 
+Phase 2 adds a parallel JSON API surface under `/api/*` for auth state and user CRUD contracts. The legacy pages and HTMX fragments still exist beside that API surface until the later frontend porting phases are done.
+
 ## Request Flow
 
 1. Echo receives the request.
 2. Middleware applies recovery, security headers, request normalization, CSRF, request IDs, logging, rate limiting, and timeout handling.
 3. Session middleware loads the current user, if any.
-4. Handlers validate input, call the store, and render Templ views or JSON.
+4. Handlers validate input, call the store, and render Templ views or JSON depending on the route surface.
 
 ## Route Split
 
-- Public: home, demo, health, login, registration, static assets
-- Protected: profile, user CRUD, user count API
+- Public legacy pages: home, demo, health, login, registration, static assets
+- Public JSON API: auth state, login, registration, logout
+- Protected legacy pages and fragments: profile, `/users`, `/users/list`, `/users/count`, `/users/form`, `/users/:id/edit`, and the legacy CRUD submits
+- Protected JSON API: `/api/users`, `/api/users/count`, `/api/users/:id`, create, update, deactivate, and delete
 
 ## Configuration Flow
 

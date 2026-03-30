@@ -91,6 +91,15 @@ func authenticationError(c echo.Context, message string) error {
 	).WithContext(c)
 }
 
+// notFoundError creates a not-found error with context.
+func notFoundError(c echo.Context, message string) error {
+	return middleware.NewAppError(
+		middleware.ErrorTypeNotFound,
+		http.StatusNotFound,
+		message,
+	).WithContext(c)
+}
+
 // conflictError creates a conflict error with optional details.
 func conflictError(c echo.Context, message string, details interface{}) error {
 	return middleware.NewAppErrorWithDetails(
