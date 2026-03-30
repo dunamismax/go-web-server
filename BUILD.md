@@ -4,283 +4,292 @@
 
 **Target frontend: web-only.**
 
-This repo should become a **Go backend + Astro/Vue web starter on Bun**.
-Do **not** add an OpenTUI frontend here.
+Keep the backend in Go. Replace the current browser layer with **TypeScript + Bun + Astro + Vue**. Do **not** add an OpenTUI frontend here.
 
 Why:
 
-- The product surface is a browser app starter, not an operator console.
-- A TUI would be ceremonial and would not improve the core reference workflow.
-- The repo name and current backend shape still make Go the right backend fit.
+- this repo is a browser app starter, not an operator console
+- the existing product surface is session-authenticated web CRUD, not terminal workbench UX
+- a TUI would add maintenance cost without improving the reference use case
 
-## Repo Role After Migration
+## Repo Role
 
-This repo should stop being a reference for Go server-rendered Templ + HTMX apps and become a reference for:
+This repo should become the **Go-backed reference starter for Stephen's default web frontend lane**:
 
-- Go for backend, auth, persistence, jobs, and runtime concerns
-- Astro for pages and delivery
-- Vue for interactive browser UI
-- Bun for frontend runtime, package management, scripts, and tests
-- PostgreSQL for durable app state
+- **backend:** Go + Echo + PostgreSQL + SQLC + Atlas
+- **frontend:** Astro + Vue + TypeScript + Bun
+- **auth:** same-origin session cookies + CSRF
+- **deployment shape:** one Go service, one Postgres database, one built web asset set
 
-If this migration lands, the repo becomes a **Go-backed implementation of Stephen's default web frontend lane**, not an exception frozen in the old UI stack.
+This is a frontend migration plan, not a backend rewrite plan.
 
-## Current State Summary
+## Current State
 
 Today the repo is:
 
-- one Go binary built around Echo
+- one Go binary with Echo handlers and middleware
 - PostgreSQL-backed with `pgx/v5`, SQLC, Atlas migrations, and session auth
-- server-rendered with Templ views plus HTMX fragments
-- styled via Tailwind CSS with DaisyUI and bundled Pico CSS
-- using `npm` for CSS asset generation
-- embedding static assets from `internal/ui/static/`
-- returning a mix of full HTML pages, HTML fragments, and a small amount of JSON
+- server-rendered with **Templ + HTMX**
+- using **Tailwind + DaisyUI + Pico CSS** built via **npm**
+- embedding frontend assets from `internal/ui/static/`
+- returning a mix of full HTML pages, HTMX fragments, redirects, and a little JSON
 
-Important current frontend/runtime truths:
+### Current user-facing surfaces
 
-- auth, users, profile, and home flows are tightly coupled to Templ + HTMX responses
-- `/api/users/count` is not really an API route today because it returns an HTML fragment
-- CSRF and session auth are already cookie-based and same-origin friendly
-- generated backend artifacts are checked in; built frontend assets are also checked in today
+Public:
 
-## Target State Summary
+- `/`
+- `/demo`
+- `/health`
+- `/auth/login`
+- `/auth/register`
+- `/auth/logout`
+- `/static/*`
+
+Authenticated:
+
+- `/profile`
+- `/users`
+- `/users/list`
+- `/users/form`
+- `/users/:id/edit`
+- `/users` `POST`
+- `/users/:id` `PUT`
+- `/users/:id/deactivate` `PATCH`
+- `/users/:id` `DELETE`
+- `/api/users/count`
+
+### Current-state truths that must not get lost
+
+- auth, profile, and user CRUD flows are tightly coupled to Templ and HTMX response shapes
+- `/api/users/count` is not a real API contract today. It returns an HTML fragment
+- session cookies are already same-origin friendly and protected by CSRF middleware
+- generated backend artifacts and built frontend assets are currently checked in
+- local development currently assumes Node/npm for CSS generation
+
+## Target State
 
 The target shape is:
 
-- **backend:** Go stays
-- **web frontend:** `web/` Astro + Vue + TypeScript + Bun
-- **database:** PostgreSQL stays
-- **auth model:** same-origin session cookies stay
-- **backend contract:** explicit JSON or boring same-origin HTTP boundaries for the web app
-- **build orchestration:** Mage can stay as the root task entrypoint, but it should call Bun for web tasks
-- **asset policy:** built web artifacts should be produced in CI/release flows, not committed as generated CSS blobs
+- **Go stays the backend**
+- **`web/` becomes the browser frontend workspace**
+- **Astro owns pages, routing, and page composition**
+- **Vue owns interactive widgets and CRUD interactions**
+- **Bun owns package management, scripts, tests, and frontend builds**
+- **PostgreSQL, Atlas, SQLC, and session auth stay in place**
 
-Hard target:
+Hard end state:
 
-- no Templ in the final frontend path
-- no HTMX in the final frontend path
-- no Node/npm dependency for the web frontend
-- no Tailwind-only asset build living as the primary UI pipeline in the Go app root
+- no Templ in the primary frontend path
+- no HTMX in the primary frontend path
+- no npm/Node dependency for the active web build
+- no fragment-shaped pseudo-API contract for frontend integration
+- no checked-in generated CSS blobs as the long-term frontend delivery model
 
 ## Backend Notes
 
-Keep the backend in Go.
+Keep Go.
 
-That is the correct fit here because:
+That is the correct backend fit because this repo is still:
 
-- the repo is explicitly a Go web server reference
-- the runtime is a long-lived web service with auth, middleware, and DB access
-- deployment simplicity and single-service operation matter more than switching languages
+- a long-running web service
+- a session-authenticated app starter
+- a Postgres-backed backend with middleware, routing, and deployment concerns
+- a repo where single-service operational simplicity matters
 
-Do **not** plan a Python rewrite in this repo.
-The migration is a **frontend rewrite around a stable Go backend**, not a full stack language churn exercise.
+Do not turn this into a Python rewrite.
+
+Do not rewrite Echo, SQLC, Atlas, session storage, or the database model unless the frontend migration exposes a concrete problem that forces it.
 
 Backend responsibilities after migration:
 
-- session auth
+- auth and session lifecycle
 - CSRF issuance and validation
 - persistence and migrations
 - user CRUD and profile logic
-- JSON/web contract endpoints
-- health checks and operational middleware
+- health and operational endpoints
+- explicit frontend-facing JSON or same-origin HTTP contracts
 
-## Data And Runtime Constraints
+## Data and Runtime Constraints
 
-These constraints should shape every phase:
-
-1. **Same-origin auth first**
-   - Keep Astro and the Go backend on the same origin in production.
-   - In development, use a proxy setup rather than inventing cross-origin auth complexity.
+1. **Same-origin auth is non-negotiable**
+   - production should keep one origin for app traffic
+   - local development should use a proxy path, not cross-origin cookie hacks
 
 2. **Session + CSRF stay real**
-   - The frontend must work with the existing session-cookie model.
-   - Do not regress CSRF protections just to make frontend integration easier.
+   - the Astro frontend must work with existing cookie auth
+   - do not weaken CSRF protections to make frontend wiring easier
 
-3. **PostgreSQL stays canonical**
-   - No database change is part of this plan.
-   - Atlas migrations and SQLC-backed data access remain in scope.
+3. **PostgreSQL remains canonical**
+   - no database change is part of this plan
+   - Atlas migrations and SQLC stay as the data path
 
-4. **Backend routes need clearer contracts**
-   - HTMX fragment endpoints are not a good long-term frontend contract.
-   - JSON endpoints should replace fragment-shaped pseudo-API routes where the new frontend needs them.
+4. **Contract cleanup is required**
+   - HTMX fragment routes are implementation details, not a durable app contract
+   - the new frontend should talk to explicit JSON or other boring same-origin endpoints
 
-5. **Release shape should stay boring**
-   - Prefer one Go service plus one built web app artifact set.
-   - Avoid introducing extra services unless the repo later earns that complexity.
+5. **Release shape stays boring**
+   - prefer one Go service plus built frontend assets
+   - do not split this into extra services unless the repo later earns it
 
 6. **BUILD.md is temporary**
-   - Once the migration is complete, fold stable guidance into `README.md` and `docs/`, then delete this file.
+   - once the migration is complete, fold durable truth into `README.md` and `docs/`, then delete this file
 
 ## Phase Plan
 
-### Phase 0 - Lock the migration boundary
+### Phase 0 - Freeze scope and map the UI surface
 
-Goal: define exactly what the new frontend must cover before code starts moving.
+Goal: define exactly what the new frontend must cover.
 
-Do:
+Deliver:
 
-- inventory current user-facing pages and HTMX fragments
-- classify routes as page, fragment, JSON, or mixed
-- identify which routes should survive, which should become JSON, and which should disappear
-- decide the new web app location as `web/`
+- route inventory mapped to page, fragment, redirect, JSON, or mixed behavior
+- frontend workspace location fixed as `web/`
+- explicit decision recorded that this repo is **web-only**
 
-Done when:
+Gate:
 
-- there is a route and screen inventory future agents can execute against
-- the repo has a written decision that the target is web-only
-- no implementation has started yet
+- no implementation yet
+- future agents can point to a finite migration surface instead of reverse-engineering it mid-build
 
-### Phase 1 - Introduce the new web workspace
+### Phase 1 - Add the new frontend workspace
 
-Goal: create the web frontend skeleton without breaking the current app.
+Goal: introduce the Astro + Vue + Bun app without breaking the current one.
 
-Do:
+Deliver:
 
-- add `web/` with Astro + Vue + TypeScript + Bun
-- use Biome, `astro check`, `bun test`, and Playwright as the frontend quality bar
-- define dev commands so the web app can talk to the Go backend cleanly
-- keep the existing Templ frontend live while the new app is scaffolded
+- `web/` with Astro, Vue, TypeScript, Bun, Biome, tests, and Playwright scaffolding
+- dev commands that let the frontend talk to the Go app through a same-origin-friendly path
+- root task wiring so Mage can call Bun-based frontend tasks
 
-Done when:
+Gate:
 
-- the repo has a clean web workspace shape
-- Bun replaces npm for active frontend work
-- the new web app can render a shell and reach the backend in development
+- the current Templ frontend still works
+- the new frontend can boot, render a shell, and reach the backend in development
 
-### Phase 2 - Normalize backend contracts for the new frontend
+### Phase 2 - Normalize backend contracts
 
-Goal: stop treating HTMX fragments as the app contract.
+Goal: stop treating HTMX fragments as the public integration surface.
 
-Do:
+Deliver:
 
-- define explicit JSON endpoints for auth state, users CRUD interactions, and dashboard widgets that the new UI needs
-- rename or replace fragment-shaped `/api` routes that are not actually APIs
-- keep same-origin cookie auth and CSRF flows explicit in the contract
-- preserve existing business logic and store layer unless a small cleanup is required
+- explicit contracts for auth state, user list, create, edit, deactivate, delete, and count
+- `/api/*` naming that reflects reality
+- CSRF expectations documented for browser requests
+- endpoint docs future frontend agents can build against without reading Templ templates
 
-Done when:
+Gate:
 
-- frontend-facing endpoints are explicit and documented
-- HTML fragment responses are no longer the primary integration boundary for new work
-- a future frontend agent can build against stable backend contracts
+- new frontend work no longer depends on fragment HTML as the contract
+- business logic mostly stays where it is
 
 ### Phase 3 - Port the app shell and auth flows
 
-Goal: establish real user-facing parity on the new stack.
+Goal: get the new stack handling real user entry paths.
 
-Do:
+Deliver:
 
-- build Astro page structure and shared layouts
-- port login, registration, logout, home, and profile flows
-- implement flash/error/success handling in the new UI
-- keep accessibility, redirect behavior, and auth failure states honest
+- Astro layouts and page shells
+- login, registration, logout, home, and profile flows
+- success, error, redirect, and unauthenticated states handled honestly
 
-Done when:
+Gate:
 
-- a user can complete the auth journey entirely through Astro + Vue
+- a user can complete the auth journey without touching Templ pages
 - session and CSRF behavior match current protections
-- the new frontend owns the primary page shell
 
-### Phase 4 - Port user management and interactive views
+### Phase 4 - Port user management
 
-Goal: replace the core HTMX CRUD experience with Vue-powered interactions.
+Goal: replace the current HTMX CRUD path with Vue-powered browser interactions.
 
-Do:
+Deliver:
 
-- port `/users` list, create, edit, deactivate, delete, and count flows
-- replace server-sent fragments with clear client/server interactions
-- keep the UX simple and server-aligned, not SPA theater
-- preserve protected-route behavior and failure handling
+- `/users` list view
+- create, edit, deactivate, delete, and count flows
+- simple client interactions without drifting into SPA theater
 
-Done when:
+Gate:
 
-- the full authenticated app experience works without Templ + HTMX
-- the frontend no longer depends on fragment endpoints for normal operation
+- the authenticated app experience works end to end through Astro + Vue
+- HTMX fragments are no longer required for normal use
 
 ### Phase 5 - Retire the legacy frontend stack
 
-Goal: remove the old UI path after parity exists.
+Goal: remove the old browser path after parity exists.
 
-Do:
+Deliver:
 
-- remove Templ-driven frontend routes and views that are no longer needed
-- remove HTMX from shipped assets and page behavior
-- remove the npm/Tailwind legacy build path if it is no longer part of the chosen frontend stack
-- stop checking in generated frontend asset blobs that only exist for the retired stack
-- simplify `internal/ui/static/` to only what the backend still truly owns
+- remove Templ views and handlers that only existed for the old browser UI
+- remove HTMX from shipped behavior
+- remove npm/Tailwind legacy build steps that the new frontend no longer needs
+- simplify `internal/ui/static/` to backend-owned assets only
 
-Done when:
+Gate:
 
 - Astro + Vue is the only primary browser frontend
-- the repo no longer markets or behaves like a Templ + HTMX starter
-- frontend build responsibility is clearly Bun-based
+- Bun is the active frontend toolchain
 
-### Phase 6 - Stabilize docs, CI, and release flow
+### Phase 6 - Rewrite docs, CI, and release flow around the new truth
 
-Goal: make the new shape the documented truth.
+Goal: make the migrated shape the documented and verified default.
 
-Do:
+Deliver:
 
-- rewrite `README.md` around the new stack
-- update `docs/architecture.md`, `docs/development.md`, and `docs/api.md`
-- update Mage/CI/release flows to build and verify the web app
-- replace old smoke assumptions with checks that prove the new frontend actually works
-- delete this `BUILD.md` once the repo is out of migration mode
+- `README.md`, `docs/architecture.md`, `docs/development.md`, and `docs/api.md` updated to the Astro + Vue + Bun frontend truth
+- CI updated to validate backend and frontend together
+- smoke checks updated so they prove the new browser path actually works
+- `BUILD.md` deleted once the repo is no longer in active migration
 
-Done when:
+Gate:
 
-- repo docs describe the Astro + Vue + Bun frontend truth
-- CI validates the backend and web frontend together
-- `BUILD.md` is no longer needed
+- the repo docs stop describing a Templ + HTMX starter
+- the new frontend is verified, not just implied
 
 ## Recommended Execution Order
 
-Follow this order and do not collapse it into one giant rewrite:
+Use this order. Do not collapse it into one giant rewrite.
 
 1. Phase 0
 2. Phase 1
 3. Phase 2
 4. Phase 3
 5. Phase 4
-6. parity check against current behavior
+6. parity pass against current behavior
 7. Phase 5
 8. Phase 6
 
-Non-negotiable sequencing rules:
+Non-negotiables:
 
-- do not delete Templ before the Astro/Vue shell and auth flows work
-- do not delete HTMX endpoints before replacement contracts exist
-- do not rewrite backend storage or auth unless the new frontend proves a real need
-- do not add a TUI unless the repo's purpose changes dramatically
+- do not delete Templ before the Astro shell and auth flows work
+- do not delete HTMX routes before replacement contracts exist
+- do not rewrite the backend just because the frontend changed
+- do not add a TUI unless the repo purpose changes completely
 
 ## Risks
 
-Primary risks:
-
-- **contract drift:** current handlers mix page HTML, fragments, and JSON, so migration work can get messy fast
-- **auth regressions:** session and CSRF behavior are easy to weaken during frontend rewrites
-- **scope creep:** this can turn into an unnecessary backend rewrite if future agents are not disciplined
-- **tooling churn:** the repo currently assumes npm and checked-in built CSS; that operating model should change deliberately, not accidentally
-- **docs lag:** if README/docs are not rewritten at the end, the repo will lie about what it is
+- **contract drift:** current handlers mix full pages, fragments, redirects, and JSON
+- **auth regressions:** session-cookie and CSRF behavior are easy to break during frontend rewrites
+- **scope creep:** agents may try to rewrite the backend when the job is really boundary cleanup
+- **toolchain churn:** npm-era CSS assumptions need deliberate removal, not accidental breakage
+- **docs lag:** if docs and CI do not move with the code, the repo will lie about what it is
 
 ## Acceptance Criteria
 
-The migration is only done when all of this is true:
+This migration is only done when all of this is true:
 
 - the repo clearly targets **Go backend + Astro/Vue web frontend on Bun**
 - the frontend decision remains **web-only**
 - login, registration, logout, profile, and user CRUD work through the new frontend
-- backend/frontend integration uses explicit, documented contracts
-- PostgreSQL, Atlas, SQLC, and session auth still work
+- backend/frontend integration uses explicit documented contracts
+- PostgreSQL, Atlas, SQLC, sessions, and CSRF still work
 - CI validates the combined backend + web shape
-- README and docs match reality
-- legacy Templ + HTMX frontend machinery is removed
-- this `BUILD.md` can be deleted because the migration is no longer active
+- repo docs match reality
+- legacy Templ + HTMX frontend machinery is gone
+- `BUILD.md` can be removed because the migration is over
 
-## Final Guidance For Future Agents
+## Final Guidance
 
-Be conservative with backend churn and aggressive about frontend boundary cleanup.
+Be conservative with backend churn and aggressive about cleaning up the frontend boundary.
 
-This repo does **not** need a second frontend.
-It needs a clean migration from an old Go-rendered browser stack to the new default browser stack while preserving the boring strengths of the existing Go backend.
+This repo does not need dual frontends.
+It needs a disciplined migration from an old Go-rendered browser stack to Stephen's default browser stack while preserving the boring strengths of the existing Go backend.
