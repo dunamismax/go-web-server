@@ -47,14 +47,14 @@ mage dev
 
 Use `mage run` if you want a plain build-and-run without Air.
 
-7. Optional Phase 1 frontend migration workflow: run the staged Astro shell in a second terminal.
+7. Optional frontend migration workflow: run the staged Astro routes in a second terminal.
 
 ```bash
 mage frontendInstall
 mage frontendDev
 ```
 
-By default the Astro dev server listens on `http://127.0.0.1:4321` and proxies `/_backend/*` to the Go app on `http://127.0.0.1:8080`.
+By default the Astro dev server listens on `http://127.0.0.1:4321` and proxies `/_backend/*` to the Go app on `http://127.0.0.1:8080`. The staged frontend now includes home plus the login, registration, logout, and profile flows.
 
 8. Optional but recommended: prove the starter flow end to end with the Docker-backed runtime smoke check:
 

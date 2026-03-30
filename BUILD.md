@@ -171,12 +171,12 @@ Backend responsibilities after migration:
   - [x] Endpoint docs are complete enough that later frontend agents can work without reading Templ templates or handler code.
     - `docs/api.md` now documents the Phase 2 JSON contract surface and the remaining legacy routes explicitly.
 
-- [ ] **Phase 3 - Port the app shell and auth flows**
+- [x] **Phase 3 - Port the app shell and auth flows**
   - [x] A staged Astro layout, page shell, and Vue status card exist in `web/`.
-  - [ ] Home, login, registration, logout, and profile flows run through Astro + Vue instead of Templ.
-    - Today only the migration shell exists in `web/`. Real auth entry paths still live in Templ.
-  - [ ] Success, error, redirect, and unauthenticated states are handled by the new frontend.
-  - [ ] A user can complete the auth journey without touching Templ pages.
+  - [x] Home, login, registration, logout, and profile flows run through Astro + Vue instead of Templ.
+    - `web/` now ships Astro routes for `/`, `/auth/login`, `/auth/register`, `/auth/logout`, and `/profile` backed by the Phase 2 JSON auth contracts.
+  - [x] Success, error, redirect, and unauthenticated states are handled by the new frontend.
+  - [x] A user can complete the auth journey without touching Templ pages.
 
 - [ ] **Phase 4 - Port user management**
   - [ ] `/users` list view is ported to Astro + Vue.
@@ -205,7 +205,7 @@ Backend responsibilities after migration:
 - [x] Phase 0
 - [x] Phase 1
 - [x] Phase 2
-- [ ] Phase 3
+- [x] Phase 3
 - [ ] Phase 4
 - [ ] Parity pass against current behavior
 - [ ] Phase 5

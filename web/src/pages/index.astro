@@ -1,8 +1,20 @@
 ---
-import MigrationShell from '../components/MigrationShell.vue';
+import HomeStatusCard from '../components/HomeStatusCard.vue';
 import AppLayout from '../layouts/AppLayout.astro';
 ---
 
-<AppLayout title="go-web-server migration shell">
-  <MigrationShell client:load />
+<AppLayout
+  title="go-web-server web frontend"
+  description="Astro + Vue auth shell for the go-web-server frontend migration."
+>
+  <section class="page-intro stack-md">
+    <p class="eyebrow">Astro + Vue browser path</p>
+    <h1>go-web-server frontend migration</h1>
+    <p class="lead">
+      The new browser shell is now handling home and auth flows in the staged <code>web/</code>
+      workspace while the Go backend keeps sessions, CSRF, and PostgreSQL in place.
+    </p>
+  </section>
+
+  <HomeStatusCard client:load />
 </AppLayout>

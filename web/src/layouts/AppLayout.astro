@@ -3,9 +3,13 @@ import '../styles/global.css';
 
 interface Props {
   title?: string;
+  description?: string;
 }
 
-const { title = 'go-web-server migration shell' } = Astro.props;
+const {
+  title = 'go-web-server web frontend',
+  description = 'Astro + Vue frontend for go-web-server auth and user flows.',
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -13,13 +17,24 @@ const { title = 'go-web-server migration shell' } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="Astro + Vue + Bun migration shell for the go-web-server frontend transition."
-    />
+    <meta name="description" content={description} />
     <title>{title}</title>
   </head>
   <body>
-    <slot />
+    <header class="site-header">
+      <div class="site-shell">
+        <a class="brand" href="/">go-web-server</a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="/">Home</a>
+          <a href="/auth/login">Login</a>
+          <a href="/auth/register">Register</a>
+          <a href="/profile">Profile</a>
+          <a href="/auth/logout">Logout</a>
+        </nav>
+      </div>
+    </header>
+    <main class="page-shell">
+      <slot />
+    </main>
   </body>
 </html>

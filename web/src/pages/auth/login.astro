@@ -1,0 +1,16 @@
+---
+import LoginForm from '../../components/LoginForm.vue';
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Sign in | go-web-server">
+  <section class="page-intro stack-md narrow">
+    <p class="eyebrow">Astro auth flow</p>
+    <h1>Sign in</h1>
+    <p class="lead compact-lead">
+      This route replaces the old redirect-driven login page with an explicit JSON-backed form.
+    </p>
+  </section>
+
+  <LoginForm client:load />
+</AppLayout>

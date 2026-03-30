@@ -1,0 +1,17 @@
+---
+import ProfilePanel from '../components/ProfilePanel.vue';
+import AppLayout from '../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Profile | go-web-server">
+  <section class="page-intro stack-md narrow">
+    <p class="eyebrow">Protected Astro route</p>
+    <h1>Profile</h1>
+    <p class="lead compact-lead">
+      The profile page now bootstraps against the Go session API and can redirect unauthenticated
+      users back to the Astro login flow.
+    </p>
+  </section>
+
+  <ProfilePanel client:load />
+</AppLayout>

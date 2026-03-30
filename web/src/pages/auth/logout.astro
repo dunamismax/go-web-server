@@ -1,0 +1,16 @@
+---
+import LogoutFlow from '../../components/LogoutFlow.vue';
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Log out | go-web-server">
+  <section class="page-intro stack-md narrow">
+    <p class="eyebrow">Astro auth flow</p>
+    <h1>Log out</h1>
+    <p class="lead compact-lead">
+      Session teardown now runs through the JSON logout contract and redirects you back to sign in.
+    </p>
+  </section>
+
+  <LogoutFlow client:load />
+</AppLayout>

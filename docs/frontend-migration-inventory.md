@@ -2,7 +2,7 @@
 
 This file is the current migration surface map for the Astro + Vue frontend work.
 
-It exists so Phase 1 can add the `web/` workspace without pretending the legacy browser path is already migrated.
+It exists so the migration can move route by route without pretending the legacy browser path is already gone.
 
 ## Status
 
@@ -11,22 +11,23 @@ It exists so Phase 1 can add the `web/` workspace without pretending the legacy 
 - **New staged workspace:** `web/`
 - **Local frontend proxy prefix:** `/_backend/*`
 - **Phase 2 result:** explicit JSON contracts now exist under `/api/*` for auth state and managed-user CRUD
-- **Next required phase after this doc:** port the app shell and auth/user flows onto Astro + Vue
+- **Phase 3 result:** the staged Astro workspace now covers home, login, registration, logout, and profile flows
+- **Next required phase after this doc:** port the protected `/users` CRUD surface onto Astro + Vue
 
 ## Route inventory
 
 | Route | Auth | Current mode | Notes for migration |
 | --- | --- | --- | --- |
-| `GET /` | public | page or HTMX fragment | Home page must move to Astro page shell later |
-| `GET /demo` | public | JSON or HTMX fragment | Good temporary connectivity check for the new frontend |
-| `GET /health` | public | JSON or HTMX fragment | Current Phase 1 shell reads this through the local proxy |
-| `GET /auth/login` | public | page or HTMX fragment | Phase 2 login contract exists under `/api/auth/login`; Astro page parity is still pending |
-| `GET /auth/register` | public | page or HTMX fragment | Phase 2 registration contract exists under `/api/auth/register`; Astro page parity is still pending |
-| `POST /auth/login` | public | redirect or HTMX redirect payload | Session + CSRF behavior must stay intact |
-| `POST /auth/register` | public | redirect or HTMX redirect payload | Session + CSRF behavior must stay intact |
-| `POST /auth/logout` | protected session in practice | redirect or HTMX redirect payload | Same-origin cookie handling is the important constraint |
-| `GET /profile` | protected | page or HTMX fragment | Astro parity is still pending, but auth/session bootstrap contracts now exist |
-| `GET /users` | protected | page or HTMX fragment | Later Astro page shell target |
+| `GET /` | public | page or HTMX fragment | Astro parity now exists in `web/`; Go still ships the legacy page for the primary browser path |
+| `GET /demo` | public | JSON or HTMX fragment | Still useful as a backend connectivity check while `/users` is being ported |
+| `GET /health` | public | JSON or HTMX fragment | The Astro home page reads this through the local proxy |
+| `GET /auth/login` | public | page or HTMX fragment | Astro parity now exists in `web/` against `/api/auth/login` |
+| `GET /auth/register` | public | page or HTMX fragment | Astro parity now exists in `web/` against `/api/auth/register` |
+| `POST /auth/login` | public | redirect or HTMX redirect payload | Legacy submit stays until the primary browser path flips |
+| `POST /auth/register` | public | redirect or HTMX redirect payload | Legacy submit stays until the primary browser path flips |
+| `POST /auth/logout` | protected session in practice | redirect or HTMX redirect payload | Legacy submit stays until the primary browser path flips |
+| `GET /profile` | protected | page or HTMX fragment | Astro parity now exists in `web/` with client-side unauthenticated redirect handling |
+| `GET /users` | protected | page or HTMX fragment | Next Astro page shell target |
 | `GET /users/list` | protected | HTMX fragment | Legacy fragment surface, not a durable frontend contract |
 | `GET /users/count` | protected | HTMX fragment | Legacy count fragment kept for the current `/users` page |
 | `GET /users/form` | protected | HTMX fragment | Legacy fragment surface, not a durable frontend contract |
@@ -48,7 +49,7 @@ It exists so Phase 1 can add the `web/` workspace without pretending the legacy 
 | `DELETE /api/users/:id` | protected | JSON | Managed-user delete contract |
 | `GET /static/*` | public | embedded assets | Legacy assets remain backend-owned until retirement phase |
 
-## Phase 1 development topology
+## Current development topology
 
 For now, local development stays split across two processes:
 

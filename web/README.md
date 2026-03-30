@@ -1,12 +1,14 @@
 # Web frontend workspace
 
-This directory is the Phase 1 Astro + Vue + Bun workspace for the `go-web-server` frontend migration.
+This directory is the staged Astro + Vue + Bun workspace for the `go-web-server` frontend migration.
 
 Current truth:
 
 - the shipped browser path is still the legacy Templ + HTMX app
-- this workspace exists in parallel so later phases can port routes without rewriting the backend first
-- local frontend development talks to the Go app through a same-origin-style proxy prefix: `/_backend/*`
+- the Astro workspace now covers `/`, `/auth/login`, `/auth/register`, `/auth/logout`, and `/profile`
+- those routes talk to the Go backend through the explicit `/api/auth/*` contracts
+- local frontend development still talks to the Go app through a same-origin-style proxy prefix: `/_backend/*`
+- the next migration target is the protected `/users` CRUD surface
 
 ## Local development
 
@@ -17,7 +19,7 @@ mage dev
 mage frontendDev
 ```
 
-By default the Astro shell runs at `http://127.0.0.1:4321` and proxies `/_backend/*` requests to `http://127.0.0.1:8080`.
+By default the Astro frontend runs at `http://127.0.0.1:4321` and proxies `/_backend/*` requests to `http://127.0.0.1:8080`.
 
 If your Go app is on a different origin, set `FRONTEND_BACKEND_ORIGIN` before starting the frontend:
 

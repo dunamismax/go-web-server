@@ -1,0 +1,17 @@
+---
+import RegisterForm from '../../components/RegisterForm.vue';
+import AppLayout from '../../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Register | go-web-server">
+  <section class="page-intro stack-md narrow">
+    <p class="eyebrow">Astro auth flow</p>
+    <h1>Create account</h1>
+    <p class="lead compact-lead">
+      Registration now talks directly to the documented auth contract instead of the Templ form
+      path.
+    </p>
+  </section>
+
+  <RegisterForm client:load />
+</AppLayout>
