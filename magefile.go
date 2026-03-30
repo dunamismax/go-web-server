@@ -20,6 +20,7 @@ const (
 	binaryName          = "server"
 	buildDir            = "bin"
 	tmpDir              = "tmp"
+	frontendDir         = "web"
 	templVersion        = "v0.3.1001"
 	sqlcVersion         = "v1.30.0"
 	golangciLintVersion = "v2.11.3"
@@ -191,6 +192,41 @@ func buildCSS() error {
 	return sh.RunV("npm", "run", "build-css")
 }
 
+func ensureFrontendWorkspace() error {
+	if _, err := os.Stat(frontendDir); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("frontend workspace %q not found", frontendDir)
+		}
+		return fmt.Errorf("failed to stat frontend workspace %q: %w", frontendDir, err)
+	}
+
+	if err := sh.Run("which", "bun"); err != nil {
+		return fmt.Errorf("bun not found in PATH")
+	}
+
+	return nil
+}
+
+func runFrontendCommand(args ...string) error {
+	if err := ensureFrontendWorkspace(); err != nil {
+		return err
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+
+	if err := os.Chdir(frontendDir); err != nil {
+		return fmt.Errorf("failed to enter frontend workspace: %w", err)
+	}
+	defer func() {
+		_ = os.Chdir(cwd)
+	}()
+
+	return sh.RunV("bun", args...)
+}
+
 // Fmt formats and tidies code using goimports and standard tooling
 func Fmt() error {
 	fmt.Println("Formatting and tidying...")
@@ -305,6 +341,48 @@ func Dev() error {
 	}
 
 	return sh.RunV(airPath)
+}
+
+// FrontendInstall installs Bun-managed frontend dependencies.
+func FrontendInstall() error {
+	fmt.Println("Installing frontend dependencies...")
+	return runFrontendCommand("install")
+}
+
+// FrontendDev starts the Astro development server.
+func FrontendDev() error {
+	fmt.Println("Starting Astro frontend dev server...")
+	return runFrontendCommand("run", "dev")
+}
+
+// FrontendBuild builds the staged Astro frontend.
+func FrontendBuild() error {
+	fmt.Println("Building Astro frontend...")
+	return runFrontendCommand("run", "build")
+}
+
+// FrontendPreview serves the built Astro frontend locally.
+func FrontendPreview() error {
+	fmt.Println("Starting Astro frontend preview server...")
+	return runFrontendCommand("run", "preview")
+}
+
+// FrontendCheck runs the main frontend quality checks.
+func FrontendCheck() error {
+	fmt.Println("Running frontend quality checks...")
+	return runFrontendCommand("run", "check")
+}
+
+// FrontendTest runs the frontend unit tests.
+func FrontendTest() error {
+	fmt.Println("Running frontend unit tests...")
+	return runFrontendCommand("run", "test")
+}
+
+// FrontendE2E runs the Playwright scaffold.
+func FrontendE2E() error {
+	fmt.Println("Running frontend Playwright tests...")
+	return runFrontendCommand("run", "test:e2e")
 }
 
 // Clean removes built binaries and generated files
@@ -561,6 +639,13 @@ Development:
   mage setup (s)        Install all development tools and dependencies
   mage generate (g)     Generate sqlc and templ code
   mage dev (d)          Start development server with hot reload
+  mage frontendInstall  Install Bun dependencies for web/
+  mage frontendDev      Start Astro frontend development server
+  mage frontendCheck    Run frontend lint, astro check, and unit tests
+  mage frontendBuild    Build staged Astro frontend
+  mage frontendPreview  Preview the staged Astro frontend locally
+  mage frontendTest     Run frontend unit tests
+  mage frontendE2E      Run frontend Playwright scaffold
   mage run (r)          Build and run server
   mage build (b)        Build production binary
 
@@ -630,6 +715,10 @@ var Aliases = map[string]interface{}{
 	"vc": VulnCheck,
 	"r":  Run,
 	"d":  Dev,
+	"fi": FrontendInstall,
+	"fd": FrontendDev,
+	"fc": FrontendCheck,
+	"fb": FrontendBuild,
 	"c":  Clean,
 	"s":  Setup,
 	"q":  Quality,

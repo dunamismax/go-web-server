@@ -10,6 +10,7 @@ This docs set stays close to the repo that exists today. Start with the developm
 ## App Behavior
 
 - [API and route behavior](api.md): public routes, protected routes, HTMX fragments, and auth behavior
+- [Frontend migration inventory](frontend-migration-inventory.md): Phase 1 route map, current response modes, and the staged Astro workspace
 - [Security notes](security.md): actual controls in the code today, plus current gaps and risks
 
 ## Deployment
@@ -22,7 +23,8 @@ This docs set stays close to the repo that exists today. Start with the developm
 
 - Top-level [`migrations/`](../migrations/) is the canonical Atlas migration directory.
 - [`internal/store/migrations/`](../internal/store/migrations/) is legacy history and should not be used as the source of truth.
-- Generated code and built frontend assets are checked in. Run `mage generate` after source changes and commit the resulting artifacts.
+- Generated Go code and legacy built frontend assets are checked in. Run `mage generate` after source changes and commit the resulting artifacts.
+- `web/` is now the staged Astro + Vue + Bun workspace for the frontend migration, but the shipped browser path is still the legacy Templ + HTMX app.
 - CI reruns generation, fails if tracked generated files drift, and runs a Docker-backed runtime smoke check.
 
 ## Naming Note

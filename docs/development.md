@@ -6,7 +6,8 @@ Run all commands in this guide from the repo root.
 
 - Go `1.26.1`
 - PostgreSQL
-- Node.js and `npm` for the Tailwind build
+- Node.js and `npm` for the current Tailwind-based legacy frontend build
+- Bun for the staged Astro + Vue frontend workspace under `web/`
 - Atlas CLI if you want explicit migration state locally
 
 ## First-Time Local Setup
@@ -46,7 +47,16 @@ mage dev
 
 Use `mage run` if you want a plain build-and-run without Air.
 
-7. Optional but recommended: prove the starter flow end to end with the Docker-backed runtime smoke check:
+7. Optional Phase 1 frontend migration workflow: run the staged Astro shell in a second terminal.
+
+```bash
+mage frontendInstall
+mage frontendDev
+```
+
+By default the Astro dev server listens on `http://127.0.0.1:4321` and proxies `/_backend/*` to the Go app on `http://127.0.0.1:8080`.
+
+8. Optional but recommended: prove the starter flow end to end with the Docker-backed runtime smoke check:
 
 ```bash
 mage smoke
@@ -73,7 +83,11 @@ See:
 
 | Command | Purpose |
 | --- | --- |
-| `mage dev` | Run the app with Air hot reload |
+| `mage dev` | Run the current Go app with Air hot reload |
+| `mage frontendInstall` | Install Bun-managed frontend dependencies in `web/` |
+| `mage frontendDev` | Run the staged Astro frontend shell |
+| `mage frontendCheck` | Run Biome, `astro check`, and Bun tests in `web/` |
+| `mage frontendBuild` | Build the staged Astro frontend |
 | `mage run` | Build and run once |
 | `mage generate` | Regenerate SQLC, Templ, and CSS output |
 | `mage fmt` | Format Go and Templ files and tidy modules |
@@ -104,7 +118,9 @@ mage migrateStatus
 
 ## Generated Files and Assets
 
-Generated artifacts are checked in for reproducible builds and releases. After changing SQL, Templ views, or CSS source, run `mage generate` and commit the resulting updates.
+Generated Go artifacts and legacy built frontend assets are checked in for reproducible builds and releases. After changing SQL, Templ views, or CSS source, run `mage generate` and commit the resulting updates.
+
+The staged Astro frontend under `web/` uses Bun and keeps its own lockfile. It is not part of `mage generate`.
 
 CI reruns `mage generate` and fails if tracked generated files or built assets drift.
 

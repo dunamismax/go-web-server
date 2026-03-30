@@ -1,12 +1,13 @@
 # go-web-server
 
-`go-web-server` is a small Go starter for server-rendered apps with Echo, Templ, HTMX, PostgreSQL, SQLC, and Mage. The goal is boring, legible defaults: one binary, one Postgres database, session auth, and enough structure to ship without dragging in a giant framework.
+`go-web-server` is a small Go starter for server-rendered apps with Echo, Templ, HTMX, PostgreSQL, SQLC, and Mage. Phase 1 of the frontend migration also adds a staged `web/` workspace built with Astro, Vue, TypeScript, and Bun. The goal is still boring, legible defaults: one binary, one Postgres database, session auth, and enough structure to ship without dragging in a giant framework.
 
 ## What You Get
 
 - Session-based login, registration, logout, and profile pages
 - A protected `/users` CRUD screen backed by PostgreSQL
-- Templ views with HTMX interactions and generated Tailwind CSS
+- Templ views with HTMX interactions and generated Tailwind CSS for the current shipped browser path
+- A staged Astro + Vue + Bun workspace under `web/` for the in-progress frontend migration
 - CSRF protection, security headers, request IDs, rate limiting, and structured errors
 - Mage tasks for setup, generation, formatting, linting, testing, building, and release work
 - Atlas migrations plus a schema bootstrap path for fresh local bring-up
@@ -68,7 +69,11 @@ The app listens on [http://localhost:8080](http://localhost:8080). Open [http://
 | Command | Purpose |
 | --- | --- |
 | `mage setup` | Install Go tools and download dependencies |
-| `mage dev` | Run the app with Air hot reload |
+| `mage dev` | Run the current Go app with Air hot reload |
+| `mage frontendInstall` | Install Bun-managed frontend dependencies in `web/` |
+| `mage frontendDev` | Run the staged Astro frontend on port `4321` |
+| `mage frontendCheck` | Run Biome, `astro check`, and Bun tests for `web/` |
+| `mage frontendBuild` | Build the staged Astro frontend |
 | `mage run` | Build and run the server once |
 | `mage generate` | Regenerate SQLC, Templ, and CSS output |
 | `mage fmt` | Format Go and Templ files and tidy modules |
@@ -113,6 +118,7 @@ For real starter bring-up confidence, run the runtime smoke check when Docker is
 - [Docs index](docs/README.md)
 - [Development guide](docs/development.md)
 - [API and route behavior](docs/api.md)
+- [Frontend migration inventory](docs/frontend-migration-inventory.md)
 - [Security notes](docs/security.md)
 - [Architecture overview](docs/architecture.md)
 - [Deployment notes](docs/deployment.md)
@@ -125,7 +131,8 @@ For real starter bring-up confidence, run the runtime smoke check when Docker is
 - The duplicate `internal/store/migrations/` directory is legacy history, not the source of truth.
 - [`internal/store/schema.sql`](internal/store/schema.sql) is the schema source used for SQLC and Atlas.
 - The app still keeps a startup bootstrap path in [`internal/store/store.go`](internal/store/store.go), but it now executes the canonical [`internal/store/schema.sql`](internal/store/schema.sql) before applying a small legacy reconciliation patch for older local databases.
-- Generated files and built frontend assets are checked in. CI runs `mage generate` and fails if that changes tracked files.
+- Generated Go files and legacy built frontend assets are checked in. CI runs `mage generate` and fails if that changes tracked files.
+- `web/` is the staged Astro + Vue + Bun workspace for the frontend migration. The current shipped browser path is still the legacy Templ + HTMX app.
 - [`scripts/runtime-smoke.sh`](scripts/runtime-smoke.sh) is the current end-to-end starter validation path. It uses `DATABASE_URL` when provided or starts a local PostgreSQL container with Docker when it is not.
 - Leave `security.trusted_proxies` empty unless the app is actually behind reverse proxies you control.
 - `package-lock.json` is tracked so frontend dependency resolution stays reproducible across contributors and CI.

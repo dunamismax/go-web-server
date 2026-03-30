@@ -4,13 +4,14 @@
 
 ```text
 Browser
-  -> Echo routes + middleware
+  -> today: Echo routes + middleware + Templ/HTMX rendering
+  -> staged migration lane: Astro + Vue workspace in web/
   -> handlers
   -> store (SQLC)
   -> PostgreSQL
 ```
 
-The repo is a small monolith. There is one binary, one Postgres database, and one main demo domain model: users.
+The repo is a small monolith. There is one binary, one Postgres database, and one main demo domain model: users. Phase 1 of the frontend migration adds a staged Astro + Vue + Bun workspace under `web/`, but the shipped browser path is still the legacy Templ + HTMX app.
 
 ## Request Flow
 
@@ -43,8 +44,9 @@ Environment variables win last.
 | [`internal/handler/`](../internal/handler/) | Route handlers and response helpers |
 | [`internal/middleware/`](../internal/middleware/) | Auth, CSRF, error, validation, and normalization middleware |
 | [`internal/store/`](../internal/store/) | Database pool setup, SQLC queries, schema, and store methods |
-| [`internal/view/`](../internal/view/) | Templ components and layouts |
-| [`internal/ui/static/`](../internal/ui/static/) | Embedded CSS, JS, images, and favicon |
+| [`internal/view/`](../internal/view/) | Templ components and layouts for the current shipped browser path |
+| [`internal/ui/static/`](../internal/ui/static/) | Embedded CSS, JS, images, and favicon for the legacy frontend |
+| [`web/`](../web/) | Staged Astro + Vue + Bun frontend workspace for the migration lane |
 | [`migrations/`](../migrations/) | Atlas-managed SQL migrations |
 | [`docs/`](./) | User-facing repo documentation |
 

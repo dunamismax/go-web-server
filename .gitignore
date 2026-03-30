@@ -98,9 +98,13 @@ yarn-debug.log*
 yarn-error.log*
 yarn.lock
 
-# Local generated artifacts that should not be tracked
-/web
+# Local frontend artifacts that should not be tracked
 /output/playwright/
+web/.astro/
+web/node_modules/
+web/dist/
+web/playwright-report/
+web/test-results/
 
 # Docker
 Dockerfile.dev
