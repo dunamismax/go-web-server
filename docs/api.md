@@ -1,112 +1,68 @@
-# API
+# API And Route Behavior
 
-Base URL: `http://localhost:8080`
+This repo now ships an embedded Astro + Vue browser frontend for the main page routes. The frontend talks to the Go backend through explicit same-origin JSON contracts under `/api/*`. The only non-API browser mutation endpoints left are the redirect-oriented auth form posts.
 
-This repo now ships an embedded Astro + Vue browser path for the primary GET routes. The frontend still talks to the Go backend through the documented `/api/*` contracts, and the remaining temporary legacy form submits still exist beside that API surface while the old Templ + HTMX path is retired.
+## CSRF Expectations
 
-## Contract rules
+- CSRF protection applies to state-changing requests.
+- The frontend bootstraps the current token from `/api/auth/state` and/or the `X-CSRF-Token` response header.
+- JSON writes should send `X-CSRF-Token`.
+- Browser auth form posts can also submit the token through the existing form middleware path.
 
-- Session auth is same-origin cookie auth. The authenticated API routes use the same session as the legacy pages.
-- The shipped embedded frontend still calls `/_backend/*` so it can share the same request code used in Astro development. The Go server strips that prefix in-process before routing.
-- Safe requests (`GET`, `HEAD`, `OPTIONS`) expose the current CSRF token through the `X-CSRF-Token` response header.
-- State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must send the CSRF token through the `X-CSRF-Token` header or a `csrf_token` form field.
-- The CSRF token rotates after every successful state-changing request. Frontend code should replace its cached token with the latest `X-CSRF-Token` response header.
-- API requests without a valid session return `401 Unauthorized` JSON. Legacy browser page requests still redirect to `/auth/login`.
-- Error responses use the shared JSON envelope from the Echo error handler.
+## Browser Pages
 
-## Error shape
+| Method | Path | Response | Notes |
+| --- | --- | --- | --- |
+| `GET` | `/` | HTML | Embedded Astro home page |
+| `GET` | `/auth/login` | HTML | Embedded Astro login page |
+| `GET` | `/auth/register` | HTML | Embedded Astro registration page |
+| `GET` | `/auth/logout` | HTML | Embedded Astro logout page |
+| `GET` | `/profile` | HTML | Embedded Astro profile page, requires auth |
+| `GET` | `/users` | HTML | Embedded Astro users page, requires auth |
+| `GET` | `/_astro/*` | Static assets | Embedded frontend asset files |
 
-All API errors use this JSON structure:
+## Utility Endpoints
 
-```json
-{
-  "type": "validation",
-  "error": "Bad Request",
-  "message": "Validation failed",
-  "details": [
-    {
-      "field": "email",
-      "message": "invalid email format",
-      "tag": "email"
-    }
-  ],
-  "code": 400,
-  "path": "/api/auth/login",
-  "method": "POST",
-  "request_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-  "timestamp": "1774898342"
-}
-```
+| Method | Path | Response | Notes |
+| --- | --- | --- | --- |
+| `GET` | `/demo` | JSON | Simple backend connectivity payload |
+| `GET` | `/health` | JSON | Health check payload |
 
-Notes:
+## Browser Auth Fallback Submits
 
-- `type` is one of `validation`, `authentication`, `not_found`, `conflict`, `csrf`, `internal`, and the other middleware error categories.
-- `details` is omitted when there is nothing useful to return.
-- `timestamp` is currently emitted as a Unix-seconds string by the shared error handler.
+These are simple browser-oriented endpoints that redirect after success:
 
-## JSON data models
+| Method | Path | Success behavior |
+| --- | --- | --- |
+| `POST` | `/auth/login` | `302` redirect to `/` |
+| `POST` | `/auth/register` | `302` redirect to `/` |
+| `POST` | `/auth/logout` | `302` redirect to `/auth/login` |
 
-`SessionUser`
-
-```json
-{
-  "id": 1,
-  "email": "user@example.com",
-  "name": "Example User",
-  "is_active": true
-}
-```
-
-`ManagedUser`
-
-```json
-{
-  "id": 12,
-  "email": "user@example.com",
-  "name": "Example User",
-  "avatar_url": null,
-  "bio": null,
-  "is_active": true,
-  "created_at": "2026-03-30T12:00:00Z",
-  "updated_at": "2026-03-30T12:00:00Z"
-}
-```
-
-Notes:
-
-- `created_at` and `updated_at` are UTC RFC3339 timestamps.
-- `/api/users` and `/api/users/count` only cover active users.
-- `/api/users/:id` can return inactive users when they still exist in the database. That is intentional so edit and post-deactivate views can inspect the record that was changed.
-
-## Public JSON routes
+## JSON Auth Contracts
 
 ### `GET /api/auth/state`
 
-Purpose: bootstrap frontend auth state and CSRF handling.
+Purpose: bootstrap current session state and CSRF details for the frontend.
 
-Auth required: no.
-
-Response `200 OK`:
+Example response:
 
 ```json
 {
-  "authenticated": false,
-  "user": null,
+  "authenticated": true,
+  "user": {
+    "id": 7,
+    "email": "user@example.com",
+    "name": "Example User",
+    "is_active": true
+  },
   "csrf": {
     "header": "X-CSRF-Token",
-    "form_field": "csrf_token",
-    "token": "current-csrf-token"
+    "token": "csrf-token-value"
   }
 }
 ```
 
-When a session exists, `authenticated` becomes `true` and `user` contains `SessionUser`.
-
 ### `POST /api/auth/login`
-
-Purpose: create a session without using redirect or HTMX response shapes.
-
-Auth required: no.
 
 Request body:
 
@@ -117,13 +73,13 @@ Request body:
 }
 ```
 
-Response `200 OK`:
+Response:
 
 ```json
 {
   "message": "Login successful",
   "user": {
-    "id": 1,
+    "id": 7,
     "email": "user@example.com",
     "name": "Example User",
     "is_active": true
@@ -131,17 +87,7 @@ Response `200 OK`:
 }
 ```
 
-Error cases:
-
-- `400` invalid JSON or validation failure
-- `401` invalid credentials or inactive account
-- `403` invalid CSRF token
-
 ### `POST /api/auth/register`
-
-Purpose: create a user account and immediately create a session.
-
-Auth required: no.
 
 Request body:
 
@@ -151,69 +97,42 @@ Request body:
   "name": "Example User",
   "password": "Password1",
   "confirm_password": "Password1",
-  "bio": "Optional short bio",
+  "bio": "Optional bio",
   "avatar_url": "https://example.com/avatar.png"
 }
 ```
 
-Optional fields: `bio`, `avatar_url`.
-
-Response `201 Created`:
-
-```json
-{
-  "message": "Registration successful",
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "name": "Example User",
-    "is_active": true
-  }
-}
-```
-
-Error cases:
-
-- `400` validation failure
-- `409` duplicate email
-- `403` invalid CSRF token
+Success returns `201 Created` plus the same response shape as login.
 
 ### `POST /api/auth/logout`
 
-Purpose: destroy the current session without redirect behavior.
-
-Auth required: no. The endpoint is safe to call even if the session is already gone.
-
-Response `200 OK`:
+Success response:
 
 ```json
 {
-  "message": "Logout successful"
+  "message": "Logout successful",
+  "user": null
 }
 ```
 
-## Protected JSON routes
-
-These routes require an authenticated active session.
+## JSON User Contracts
 
 ### `GET /api/users`
 
-Purpose: fetch the active user list for the new frontend.
-
-Response `200 OK`:
+Returns active managed users.
 
 ```json
 {
   "users": [
     {
-      "id": 12,
+      "id": 7,
       "email": "user@example.com",
       "name": "Example User",
-      "avatar_url": null,
-      "bio": null,
+      "bio": "Optional bio",
+      "avatar_url": "https://example.com/avatar.png",
       "is_active": true,
-      "created_at": "2026-03-30T12:00:00Z",
-      "updated_at": "2026-03-30T12:00:00Z"
+      "created_at": "2026-03-30T20:15:00Z",
+      "updated_at": "2026-03-30T20:15:00Z"
     }
   ],
   "count": 1
@@ -221,10 +140,6 @@ Response `200 OK`:
 ```
 
 ### `GET /api/users/count`
-
-Purpose: fetch the active user count as JSON.
-
-Response `200 OK`:
 
 ```json
 {
@@ -234,214 +149,55 @@ Response `200 OK`:
 
 ### `GET /api/users/:id`
 
-Purpose: fetch a single user record for edit flows.
-
-Response `200 OK`:
-
-```json
-{
-  "user": {
-    "id": 12,
-    "email": "user@example.com",
-    "name": "Example User",
-    "avatar_url": null,
-    "bio": null,
-    "is_active": true,
-    "created_at": "2026-03-30T12:00:00Z",
-    "updated_at": "2026-03-30T12:00:00Z"
-  }
-}
-```
-
-Error cases:
-
-- `400` invalid `:id`
-- `404` missing user
+Returns a single managed user record for edit flows.
 
 ### `POST /api/users`
 
-Purpose: create a managed user from the protected CRUD surface.
-
-Request body:
-
-```json
-{
-  "email": "user@example.com",
-  "name": "Example User",
-  "password": "Password1",
-  "confirm_password": "Password1",
-  "bio": "Optional short bio",
-  "avatar_url": "https://example.com/avatar.png"
-}
-```
-
-Response `201 Created`:
-
-```json
-{
-  "message": "User created successfully",
-  "user": {
-    "id": 12,
-    "email": "user@example.com",
-    "name": "Example User",
-    "avatar_url": null,
-    "bio": null,
-    "is_active": true,
-    "created_at": "2026-03-30T12:00:00Z",
-    "updated_at": "2026-03-30T12:00:00Z"
-  }
-}
-```
-
-Error cases:
-
-- `400` validation failure
-- `409` duplicate email
-- `403` invalid CSRF token
+Creates a managed user.
 
 ### `PUT /api/users/:id`
 
-Purpose: update a managed user.
+Updates a managed user.
 
-Request body:
+### `PATCH /api/users/:id/deactivate`
 
-```json
-{
-  "email": "user@example.com",
-  "name": "Updated User",
-  "password": "Password2",
-  "confirm_password": "Password2",
-  "bio": "Optional short bio",
-  "avatar_url": "https://example.com/avatar.png"
-}
-```
+Deactivates a managed user.
 
-Notes:
+### `DELETE /api/users/:id`
 
-- `email` and `name` are required.
-- `password` and `confirm_password` are both optional.
-- If either password field is supplied, both are required and must match.
+Deletes a managed user.
 
-Response `200 OK`:
+All successful mutation responses share this shape:
 
 ```json
 {
   "message": "User updated successfully",
   "user": {
-    "id": 12,
+    "id": 7,
     "email": "user@example.com",
-    "name": "Updated User",
-    "avatar_url": null,
-    "bio": null,
+    "name": "Example User",
+    "bio": "Optional bio",
+    "avatar_url": "https://example.com/avatar.png",
     "is_active": true,
-    "created_at": "2026-03-30T12:00:00Z",
-    "updated_at": "2026-03-30T12:10:00Z"
+    "created_at": "2026-03-30T20:15:00Z",
+    "updated_at": "2026-03-30T20:20:00Z"
   }
 }
 ```
 
-Error cases:
+## Error Shape
 
-- `400` validation failure or invalid `:id`
-- `404` missing user
-- `409` duplicate email
-- `403` invalid CSRF token
-
-### `PATCH /api/users/:id/deactivate`
-
-Purpose: soft deactivate a user.
-
-Request body: none.
-
-Response `200 OK`:
+Validation and application errors use the shared structured error middleware. Typical JSON responses include:
 
 ```json
 {
-  "message": "User deactivated successfully",
-  "user": {
-    "id": 12,
-    "email": "user@example.com",
-    "name": "Updated User",
-    "avatar_url": null,
-    "bio": null,
-    "is_active": false,
-    "created_at": "2026-03-30T12:00:00Z",
-    "updated_at": "2026-03-30T12:15:00Z"
-  }
+  "error": "Validation failed",
+  "type": "validation",
+  "details": [
+    {
+      "field": "email",
+      "message": "Email is required"
+    }
+  ]
 }
 ```
-
-Error cases:
-
-- `400` invalid `:id`
-- `404` missing user
-- `403` invalid CSRF token
-
-### `DELETE /api/users/:id`
-
-Purpose: hard delete a user.
-
-Request body: none.
-
-Response `200 OK`:
-
-```json
-{
-  "id": 12,
-  "deleted": true,
-  "message": "User deleted successfully"
-}
-```
-
-Error cases:
-
-- `400` invalid `:id`
-- `404` missing user
-- `403` invalid CSRF token
-
-## Legacy HTML and HTMX routes that still exist
-
-These routes still power the shipped browser UI. They remain in place while the remaining legacy HTMX path is retired. The `/users` page now owns its inline create and edit form state and renders its current count and list inline, so the old `/users/list`, `/users/count`, `/users/form`, and `/users/:id/edit` fragments are gone.
-
-| Method | Path | Response shape | Notes |
-| --- | --- | --- | --- |
-| `GET` | `/` | HTML page or HTMX fragment | Home page |
-| `GET` | `/demo` | JSON or HTMX fragment | Utility demo endpoint |
-| `GET` | `/health` | JSON or HTMX fragment | Health endpoint |
-| `GET` | `/auth/login` | HTML page or HTMX fragment | Legacy login page |
-| `GET` | `/auth/register` | HTML page or HTMX fragment | Legacy registration page |
-| `POST` | `/auth/login` | Redirect or HTMX redirect payload | Legacy login submit |
-| `POST` | `/auth/register` | Redirect or HTMX redirect payload | Legacy registration submit |
-| `POST` | `/auth/logout` | Redirect or HTMX redirect payload | Legacy logout submit |
-| `GET` | `/profile` | HTML page or HTMX fragment | Legacy profile page |
-| `GET` | `/users` | HTML page or HTMX fragment | Legacy users screen with inline list, count, and inline form state rendering |
-| `POST` | `/users` | HTML fragment | Legacy create submit |
-| `PUT` | `/users/:id` | HTML fragment | Legacy update submit |
-| `PATCH` | `/users/:id/deactivate` | HTML fragment | Legacy deactivate submit |
-| `DELETE` | `/users/:id` | Empty `200 OK` | Legacy delete submit |
-| `GET` | `/static/*` | Static files | Embedded legacy assets |
-
-## Health endpoint
-
-`GET /health` returns JSON like:
-
-```json
-{
-  "status": "ok",
-  "timestamp": "2026-03-07T15:04:05Z",
-  "service": "go-web-server",
-  "version": "4.0.0",
-  "uptime": "12m3s",
-  "checks": {
-    "database": "ok",
-    "database_connections": "ok",
-    "memory": "ok"
-  }
-}
-```
-
-Status codes:
-
-- `200 OK`: healthy
-- `206 Partial Content`: warning or degraded
-- `503 Service Unavailable`: unhealthy

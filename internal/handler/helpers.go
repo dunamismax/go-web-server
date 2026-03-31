@@ -8,32 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/a-h/templ"
 	"github.com/dunamismax/go-web-server/internal/middleware"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/labstack/echo/v4"
 )
-
-// isHtmxRequest checks if the request is an HTMX request
-func isHtmxRequest(c echo.Context) bool {
-	return c.Request().Header.Get(HtmxRequest) == HtmxRequestHeader
-}
-
-// htmxRedirect sets the HX-Redirect header and returns a JSON response
-func htmxRedirect(c echo.Context, url, message string) error {
-	c.Response().Header().Set(HtmxRedirect, url)
-	return c.JSON(http.StatusOK, map[string]string{
-		"message": message,
-	})
-}
-
-// redirectOrHtmx handles both regular redirects and HTMX redirects
-func redirectOrHtmx(c echo.Context, url, message string) error {
-	if isHtmxRequest(c) {
-		return htmxRedirect(c, url, message)
-	}
-	return c.Redirect(http.StatusFound, url)
-}
 
 // setupCSRFHeaders sets CSRF token in response headers if available
 func setupCSRFHeaders(c echo.Context) string {
@@ -42,23 +20,6 @@ func setupCSRFHeaders(c echo.Context) string {
 		c.Response().Header().Set("X-CSRF-Token", token)
 	}
 	return token
-}
-
-// renderWithCSRF renders content with CSRF handling for both HTMX and regular requests
-func renderWithCSRF(c echo.Context, htmxComponent, fullPageComponent, basicComponent templ.Component) error {
-	setupCSRFHeaders(c)
-
-	if isHtmxRequest(c) {
-		return htmxComponent.Render(c.Request().Context(), c.Response().Writer)
-	}
-
-	// Try to use the full page component with CSRF first
-	if fullPageComponent != nil {
-		return fullPageComponent.Render(c.Request().Context(), c.Response().Writer)
-	}
-
-	// Fallback to basic component
-	return basicComponent.Render(c.Request().Context(), c.Response().Writer)
 }
 
 // Error helpers for common error patterns

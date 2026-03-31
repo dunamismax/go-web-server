@@ -1,63 +1,60 @@
-# Frontend migration inventory
+# Frontend Migration Inventory
 
-This file is the current migration surface map for the Astro + Vue frontend work.
+This document started as the route-by-route migration inventory for the Templ and HTMX browser stack. The migration is now complete. It remains as a historical map of what changed and what survived the cleanup.
 
-It exists so the migration can move route by route without pretending the remaining legacy mutation path is already gone.
+## Final Outcome
 
-## Status
+- Embedded Astro pages now own the shipped browser surface for `/`, `/auth/login`, `/auth/register`, `/auth/logout`, `/profile`, and `/users`.
+- Managed-user browser mutations no longer use legacy fragment endpoints.
+- The Go backend now exposes the durable browser integration surface through `/api/auth/*` and `/api/users/*`.
+- The only browser fallback submit endpoints left outside `/api/*` are the redirect-oriented auth form posts.
+- Templ, HTMX, and the repo-root legacy CSS pipeline are gone.
 
-- **Migration lane:** web-only
-- **Current primary browser path:** embedded Astro + Vue build served by Go
-- **New staged workspace:** `web/`
-- **Local frontend proxy prefix:** `/_backend/*`
-- **Shipped same-origin bridge:** Go strips `/_backend/*` to the real backend routes for the embedded frontend
-- **Phase 2 result:** explicit JSON contracts now exist under `/api/*` for auth state and managed-user CRUD
-- **Phase 3 result:** the staged Astro workspace now covers home, login, registration, logout, and profile flows
-- **Phase 4 result:** the staged Astro workspace now also covers the protected `/users` CRUD surface through the JSON contracts
-- **Phase 6 slice now in place:** CI runs frontend install, check, build, mocked e2e coverage, and a real Astro browser smoke flow
-- **Latest shipped-path slice:** Go now serves the built Astro frontend for `/`, `/auth/login`, `/auth/register`, `/auth/logout`, `/profile`, and `/users`, plus `/_astro/*` assets, from committed embedded dist output
-- **Latest legacy slice:** the remaining legacy-only browser surface is the old auth and `/users` mutation submit path
-- **Next required phase after this doc:** retire the temporary legacy submit/rendering path only after the Astro CRUD path has enough verification
+## Final Route Inventory
 
-## Route inventory
+### Browser pages
 
-| Route | Auth | Current mode | Notes for migration |
+| Route | Auth | Shape | Notes |
 | --- | --- | --- | --- |
-| `GET /` | public | embedded Astro page | Go now serves `web/dist/index.html` as the shipped browser path |
-| `GET /demo` | public | JSON or HTMX fragment | Still useful as a backend connectivity check while the legacy browser path still exists |
-| `GET /health` | public | JSON or HTMX fragment | The Astro home page reads this through the local proxy |
-| `GET /auth/login` | public | embedded Astro page | Go now serves `web/dist/auth/login/index.html` as the shipped browser path |
-| `GET /auth/register` | public | embedded Astro page | Go now serves `web/dist/auth/register/index.html` as the shipped browser path |
-| `GET /auth/logout` | public | embedded Astro page | Go now serves `web/dist/auth/logout/index.html` as the shipped browser path |
-| `POST /auth/login` | public | redirect or HTMX redirect payload | Temporary legacy submit kept in place while the old browser path is retired |
-| `POST /auth/register` | public | redirect or HTMX redirect payload | Temporary legacy submit kept in place while the old browser path is retired |
-| `POST /auth/logout` | protected session in practice | redirect or HTMX redirect payload | Temporary legacy submit kept in place while the old browser path is retired |
-| `GET /profile` | protected | embedded Astro page | Go now serves `web/dist/profile/index.html` behind auth middleware for the shipped browser path |
-| `GET /users` | protected | embedded Astro page | Go now serves `web/dist/users/index.html` behind auth middleware for the shipped browser path |
-| `POST /users` | protected | HTMX fragment | Temporary legacy submit kept in place while the old browser path is retired |
-| `PUT /users/:id` | protected | HTMX fragment | Temporary legacy submit kept in place while the old browser path is retired |
-| `PATCH /users/:id/deactivate` | protected | HTMX fragment | Temporary legacy submit kept in place while the old browser path is retired |
-| `DELETE /users/:id` | protected | empty `200 OK` | Legacy delete submit kept in place until the legacy browser path is retired |
-| `GET /_astro/*` | public | embedded built assets | Served from committed `web/dist/_astro/*` output |
-| `GET /api/auth/state` | public | JSON | Frontend bootstrap contract for session and CSRF state |
-| `POST /api/auth/login` | public | JSON | Explicit login contract for later Astro auth flows |
-| `POST /api/auth/register` | public | JSON | Explicit registration contract for later Astro auth flows |
-| `POST /api/auth/logout` | public | JSON | Explicit logout contract for later Astro auth flows |
-| `GET /api/users` | protected | JSON | Active managed-user list contract |
-| `GET /api/users/count` | protected | JSON | Active managed-user count contract |
-| `GET /api/users/:id` | protected | JSON | Single-user fetch contract for edit flows |
-| `POST /api/users` | protected | JSON | Managed-user create contract |
-| `PUT /api/users/:id` | protected | JSON | Managed-user update contract |
-| `PATCH /api/users/:id/deactivate` | protected | JSON | Managed-user deactivate contract |
-| `DELETE /api/users/:id` | protected | JSON | Managed-user delete contract |
-| `GET /static/*` | public | embedded assets | Legacy assets remain backend-owned until retirement phase |
+| `GET /` | public | embedded Astro HTML | Shipped home page |
+| `GET /auth/login` | public | embedded Astro HTML | Sign-in page |
+| `GET /auth/register` | public | embedded Astro HTML | Registration page |
+| `GET /auth/logout` | public | embedded Astro HTML | Logout flow page |
+| `GET /profile` | protected | embedded Astro HTML | Protected profile page |
+| `GET /users` | protected | embedded Astro HTML | Protected CRUD page |
+| `GET /_astro/*` | public | static asset files | Embedded frontend assets |
 
-## Current development topology
+### Browser fallback submits
 
-For now, local development stays split across two processes:
+| Route | Auth | Shape | Notes |
+| --- | --- | --- | --- |
+| `POST /auth/login` | public | redirect | Browser fallback submit |
+| `POST /auth/register` | public | redirect | Browser fallback submit |
+| `POST /auth/logout` | protected session in practice | redirect | Browser fallback submit |
 
-1. `mage dev` runs the Go app on `http://127.0.0.1:8080`
-2. `mage frontendDev` runs Astro on `http://127.0.0.1:4321`
-3. Astro proxies `/_backend/*` to the Go app so browser requests stay same-origin from the frontend's point of view
+### Utility endpoints
 
-That keeps session-cookie and CSRF work on a sane path. In shipped mode, the Go app serves the built Astro pages directly and strips `/_backend` in-process so those same frontend fetch paths still resolve on one origin.
+| Route | Auth | Shape | Notes |
+| --- | --- | --- | --- |
+| `GET /demo` | public | JSON | Backend connectivity check |
+| `GET /health` | public | JSON | Operational health payload |
+
+### JSON contracts
+
+| Route family | Auth | Shape | Notes |
+| --- | --- | --- | --- |
+| `/api/auth/*` | mixed | JSON | Auth bootstrap and session mutations |
+| `/api/users/*` | protected | JSON | Managed-user list, count, fetch, create, update, deactivate, delete |
+
+## Retired Surfaces
+
+The following legacy browser surfaces were removed:
+
+- Templ-rendered browser pages and layouts
+- HTMX fragment rendering and HX-specific mutation responses
+- `/users/list`
+- `/users/count` HTML fragment behavior
+- `/users/form`
+- `/users/:id/edit`
+- browser mutation routes for `POST /users`, `PUT /users/:id`, `PATCH /users/:id/deactivate`, and `DELETE /users/:id`
+- the repo-root CSS asset pipeline and checked-in CSS/HTMX blobs under `internal/ui/static/`

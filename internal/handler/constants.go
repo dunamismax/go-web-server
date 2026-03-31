@@ -1,17 +1,5 @@
 package handler
 
-// HTTP Header constants
-const (
-	HtmxRequestHeader = "true"
-	HtmxRequest       = "HX-Request"
-	HtmxRedirect      = "HX-Redirect"
-	HtmxTrigger       = "HX-Trigger"
-	HtmxTarget        = "HX-Target"
-	HtmxSwap          = "HX-Swap"
-
-	ContentTypeJSON = "application/json"
-)
-
 // Route constants
 const (
 	RouteHome     = "/"
@@ -19,7 +7,6 @@ const (
 	RouteRegister = "/auth/register"
 	RouteLogout   = "/auth/logout"
 	RouteProfile  = "/profile"
-	RouteUsers    = "/users"
 
 	RouteAPIAuthState    = "/api/auth/state"
 	RouteAPIAuthLogin    = "/api/auth/login"

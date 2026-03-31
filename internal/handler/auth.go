@@ -8,7 +8,6 @@ import (
 
 	"github.com/dunamismax/go-web-server/internal/middleware"
 	"github.com/dunamismax/go-web-server/internal/store"
-	"github.com/dunamismax/go-web-server/internal/view"
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -253,49 +252,13 @@ func (h *AuthHandler) registerAndLogin(c echo.Context) (*middleware.User, error)
 	return &authUser, nil
 }
 
-// LoginPage renders the login page
-func (h *AuthHandler) LoginPage(c echo.Context) error {
-	// Check if user is already authenticated
-	if user, exists, err := h.currentSessionUser(c); err != nil {
-		return err
-	} else if exists && user.IsActive {
-		return c.Redirect(http.StatusFound, RouteHome)
-	}
-
-	token := middleware.GetCSRFToken(c)
-
-	return renderWithCSRF(c,
-		view.LoginContent(),       // HTMX component
-		view.LoginWithCSRF(token), // Full page component with CSRF
-		view.Login(),              // Basic component
-	)
-}
-
-// RegisterPage renders the registration page
-func (h *AuthHandler) RegisterPage(c echo.Context) error {
-	// Check if user is already authenticated
-	if user, exists, err := h.currentSessionUser(c); err != nil {
-		return err
-	} else if exists && user.IsActive {
-		return c.Redirect(http.StatusFound, RouteHome)
-	}
-
-	token := middleware.GetCSRFToken(c)
-
-	return renderWithCSRF(c,
-		view.RegisterContent(),       // HTMX component
-		view.RegisterWithCSRF(token), // Full page component with CSRF
-		view.Register(),              // Basic component
-	)
-}
-
 // Login handles user login
 func (h *AuthHandler) Login(c echo.Context) error {
 	if _, err := h.authenticate(c); err != nil {
 		return err
 	}
 
-	return redirectOrHtmx(c, RouteHome, MsgLoginSuccess)
+	return c.Redirect(http.StatusFound, RouteHome)
 }
 
 // Register handles user registration
@@ -304,7 +267,7 @@ func (h *AuthHandler) Register(c echo.Context) error {
 		return err
 	}
 
-	return redirectOrHtmx(c, RouteHome, MsgRegisterSuccess)
+	return c.Redirect(http.StatusFound, RouteHome)
 }
 
 // Logout handles user logout
@@ -328,7 +291,7 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 	}
 
 	// Return success response
-	return redirectOrHtmx(c, RouteLogin, MsgLogoutSuccess)
+	return c.Redirect(http.StatusFound, RouteLogin)
 }
 
 // AuthState returns the current session state for frontend bootstrap.
@@ -396,23 +359,4 @@ func (h *AuthHandler) LogoutAPI(c echo.Context) error {
 	return writeJSON(c, http.StatusOK, apiAuthMutationResponse{
 		Message: MsgLogoutSuccess,
 	})
-}
-
-// Profile handles user profile page
-func (h *AuthHandler) Profile(c echo.Context) error {
-	user, exists, err := h.currentSessionUser(c)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return c.Redirect(http.StatusFound, RouteLogin)
-	}
-
-	token := middleware.GetCSRFToken(c)
-
-	return renderWithCSRF(c,
-		view.ProfileContent(*user),         // HTMX component
-		view.ProfileWithCSRF(*user, token), // Full page component with CSRF
-		view.Profile(*user),                // Basic component
-	)
 }

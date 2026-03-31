@@ -152,7 +152,7 @@ func (s *SessionAuthService) RequireAuth() echo.MiddlewareFunc {
 			user, exists := s.GetCurrentUser(c)
 			if !exists {
 				// Redirect to login page for browser requests
-				if c.Request().Header.Get("HX-Request") != "true" && !expectsJSONResponse(c.Request()) {
+				if !expectsJSONResponse(c.Request()) {
 					return c.Redirect(http.StatusFound, "/auth/login")
 				}
 

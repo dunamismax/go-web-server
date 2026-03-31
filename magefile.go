@@ -21,7 +21,6 @@ const (
 	buildDir            = "bin"
 	tmpDir              = "tmp"
 	frontendDir         = "web"
-	templVersion        = "v0.3.1001"
 	sqlcVersion         = "v1.30.0"
 	golangciLintVersion = "v2.11.3"
 )
@@ -144,7 +143,7 @@ func getGoBinaryPath(binaryName string) (string, error) {
 // Generate runs all code generation
 func Generate() error {
 	fmt.Println("Generating code...")
-	mg.Deps(generateSqlc, generateTempl, buildCSS)
+	mg.Deps(generateSqlc)
 	return nil
 }
 
@@ -155,41 +154,6 @@ func generateSqlc() error {
 		return fmt.Errorf("sqlc not found: %w", err)
 	}
 	return sh.RunV(sqlcPath, "generate")
-}
-
-func generateTempl() error {
-	fmt.Println("  Generating templ code...")
-	templPath, err := getGoBinaryPath("templ")
-	if err != nil {
-		return fmt.Errorf("templ not found: %w", err)
-	}
-	return sh.RunV(templPath, "generate")
-}
-
-func buildCSS() error {
-	fmt.Println("  Building legacy CSS assets...")
-
-	// Check if bun is available
-	if err := sh.Run("which", "bun"); err != nil {
-		fmt.Println("    Warning: bun not found, skipping CSS build")
-		return nil
-	}
-
-	// Check if node_modules exists
-	if _, err := os.Stat("node_modules"); os.IsNotExist(err) {
-		bunArgs := []string{"install"}
-		if _, err := os.Stat("bun.lock"); err == nil {
-			bunArgs = append(bunArgs, "--frozen-lockfile")
-		}
-
-		fmt.Println("    Installing Bun dependencies for legacy CSS build...")
-		if err := sh.RunV("bun", bunArgs...); err != nil {
-			return fmt.Errorf("failed to install Bun dependencies for legacy CSS build: %w", err)
-		}
-	}
-
-	// Build CSS
-	return sh.RunV("bun", "run", "build-css")
 }
 
 func ensureFrontendWorkspace() error {
@@ -250,14 +214,6 @@ func Fmt() error {
 			if err := sh.RunV("go", "fmt", "./..."); err != nil {
 				return fmt.Errorf("failed to format code: %w", err)
 			}
-		}
-	}
-
-	// Format templ files if templ is available
-	if templPath, err := getGoBinaryPath("templ"); err == nil {
-		fmt.Println("  Formatting templ files...")
-		if err := sh.RunV(templPath, "fmt", "."); err != nil {
-			fmt.Printf("Warning: failed to format templ files: %v\n", err)
 		}
 	}
 
@@ -438,9 +394,6 @@ func Reset() error {
 	// Remove any generated code to ensure fresh generation
 	fmt.Println("Removing generated files...")
 	generatedFiles := []string{
-		"internal/view/home_templ.go",
-		"internal/view/users_templ.go",
-		"internal/view/layout/base_templ.go",
 		"internal/store/queries.sql.go",
 	}
 
@@ -470,7 +423,6 @@ func Setup() error {
 	fmt.Println("Setting up development environment...")
 
 	tools := map[string]string{
-		"templ":       "github.com/a-h/templ/cmd/templ@" + templVersion,
 		"sqlc":        "github.com/sqlc-dev/sqlc/cmd/sqlc@" + sqlcVersion,
 		"govulncheck": "golang.org/x/vuln/cmd/govulncheck@latest",
 		"air":         "github.com/air-verse/air@latest",
@@ -643,7 +595,7 @@ Available commands:
 
 Development:
   mage setup (s)        Install all development tools and dependencies
-  mage generate (g)     Generate sqlc and templ code
+  mage generate (g)     Generate sqlc code
   mage dev (d)          Start development server with hot reload
   mage frontendInstall  Install Bun dependencies for web/
   mage frontendDev      Start Astro frontend development server

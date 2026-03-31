@@ -66,7 +66,7 @@ onMounted(() => {
     <article class="card status-card stack-lg">
       <div class="card-header">
         <div>
-          <p class="eyebrow">Phase 3 auth shell</p>
+          <p class="eyebrow">Embedded frontend status</p>
           <h2>Session-aware home page</h2>
         </div>
         <button type="button" class="button" @click="loadHomeData">Reload</button>
@@ -87,7 +87,7 @@ onMounted(() => {
             Same-origin cookies and CSRF are already wired for the Astro frontend path.
           </p>
           <p v-else class="muted compact">
-            Sign in or register through Astro to start a protected session without touching Templ.
+            Sign in or register through Astro to start a protected session on the shipped browser path.
           </p>
           <p v-if="authError" class="error compact">{{ authError }}</p>
         </div>
@@ -130,12 +130,12 @@ onMounted(() => {
     </article>
 
     <article class="card stack-md">
-      <p class="eyebrow">Still ahead</p>
-      <h2>Phase 5 target</h2>
+      <p class="eyebrow">What shipped</p>
+      <h2>Legacy browser stack retired</h2>
       <ul>
-        <li>Retire the Templ-only browser views once the Astro CRUD path has enough verification</li>
-        <li>Remove HTMX from normal shipped browser behavior</li>
-        <li>Remove the remaining repo-root legacy CSS asset pipeline after the browser cutover</li>
+        <li>The Go binary now serves embedded Astro pages for the shipped browser surface</li>
+        <li>Managed-user work runs through <code>/api/users/*</code> instead of legacy submit fragments</li>
+        <li>The repo no longer depends on Templ, HTMX, or the old repo-root CSS asset pipeline</li>
       </ul>
     </article>
   </section>

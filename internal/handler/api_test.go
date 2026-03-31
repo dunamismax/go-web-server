@@ -401,100 +401,6 @@ func TestDeleteUserAPIReturnsNotFoundWhenMissing(t *testing.T) {
 	}
 }
 
-func TestUsersPageRendersInlineLegacyData(t *testing.T) {
-	t.Parallel()
-
-	handler := &UserHandler{
-		store: &mockStore{
-			listUsersFn: func(context.Context) ([]store.User, error) {
-				return []store.User{sampleStoreUser(7, true)}, nil
-			},
-		},
-		authService: &mockAuthService{},
-	}
-
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/users", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.Set("csrf", testCSRFToken)
-
-	if err := handler.Users(c); err != nil {
-		t.Fatalf("Users() error = %v", err)
-	}
-
-	body := rec.Body.String()
-	if !strings.Contains(body, "user@example.com") {
-		t.Fatalf("users page did not include user email: %q", body)
-	}
-	if !strings.Contains(body, `id="user-count"`) || !strings.Contains(body, ">1</span>") {
-		t.Fatalf("users page did not include inline count: %q", body)
-	}
-	if !strings.Contains(body, `/users?form=create`) {
-		t.Fatalf("users page did not include inline create toggle: %q", body)
-	}
-	if !strings.Contains(body, `/users?edit=7`) {
-		t.Fatalf("users page did not include inline edit toggle: %q", body)
-	}
-	if strings.Contains(body, "/users/list") {
-		t.Fatalf("users page still referenced retired /users/list fragment: %q", body)
-	}
-	if strings.Contains(body, "/users/count") {
-		t.Fatalf("users page still referenced retired /users/count fragment: %q", body)
-	}
-	if strings.Contains(body, "/users/form") {
-		t.Fatalf("users page still referenced retired /users/form fragment: %q", body)
-	}
-	if strings.Contains(body, "/users/7/edit") {
-		t.Fatalf("users page still referenced retired /users/:id/edit fragment: %q", body)
-	}
-}
-
-func TestUsersPageRendersInlineEditFormFromQueryParam(t *testing.T) {
-	t.Parallel()
-
-	handler := &UserHandler{
-		store: &mockStore{
-			listUsersFn: func(context.Context) ([]store.User, error) {
-				return []store.User{sampleStoreUser(7, true)}, nil
-			},
-			getUserFn: func(_ context.Context, id int64) (store.User, error) {
-				if id != 7 {
-					t.Fatalf("id = %d, want 7", id)
-				}
-				user := sampleStoreUser(id, true)
-				user.Name = "Inline Edit"
-				return user, nil
-			},
-		},
-		authService: &mockAuthService{},
-	}
-
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/users?edit=7", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.Set("csrf", testCSRFToken)
-
-	if err := handler.Users(c); err != nil {
-		t.Fatalf("Users() error = %v", err)
-	}
-
-	body := rec.Body.String()
-	if !strings.Contains(body, "Edit User") {
-		t.Fatalf("users page did not render inline edit form: %q", body)
-	}
-	if !strings.Contains(body, `hx-put="/users/7"`) {
-		t.Fatalf("users page did not render inline edit submit target: %q", body)
-	}
-	if !strings.Contains(body, `value="Inline Edit"`) {
-		t.Fatalf("users page did not render inline edit values: %q", body)
-	}
-	if strings.Contains(body, "user-form-modal") {
-		t.Fatalf("users page still rendered legacy modal container: %q", body)
-	}
-}
-
 func TestUserCountAPIReturnsJSONContract(t *testing.T) {
 	t.Parallel()
 
@@ -577,6 +483,18 @@ func TestRegisterRoutesRetiresLegacyUserFormFragments(t *testing.T) {
 
 	if !hasRoute(http.MethodGet, "/users") {
 		t.Fatal("/users route missing")
+	}
+	if hasRoute(http.MethodPost, "/users") {
+		t.Fatal("legacy POST /users route still registered")
+	}
+	if hasRoute(http.MethodPut, "/users/:id") {
+		t.Fatal("legacy PUT /users/:id route still registered")
+	}
+	if hasRoute(http.MethodPatch, "/users/:id/deactivate") {
+		t.Fatal("legacy PATCH /users/:id/deactivate route still registered")
+	}
+	if hasRoute(http.MethodDelete, "/users/:id") {
+		t.Fatal("legacy DELETE /users/:id route still registered")
 	}
 	if hasRoute(http.MethodGet, "/users/form") {
 		t.Fatal("legacy /users/form route still registered")

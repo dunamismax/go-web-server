@@ -1,65 +1,69 @@
-# Architecture
+# Architecture Overview
 
-## High-Level Shape
+## Current Shape
+
+The app now ships as one Go service plus one committed frontend build:
 
 ```text
-Browser
-  -> Echo routes + middleware + embedded Astro dist for primary GET pages
-  -> temporary legacy mutation submits still return redirect or HTMX-oriented responses
-  -> handlers
-  -> store (SQLC)
-  -> PostgreSQL
+browser
+  -> embedded Astro pages served by Echo
+  -> same-origin /_backend/* bridge in shipped builds
+  -> explicit JSON contracts under /api/*
+  -> session cookie + CSRF middleware in Go
+  -> PostgreSQL via pgx/sqlc
 ```
 
-The repo is a small monolith. There is one binary, one Postgres database, and one main demo domain model: users. The Astro + Vue + Bun workspace under `web/` now owns the shipped GET browser path for home, auth, profile, and users through committed `web/dist` output that is embedded into the Go binary.
+The shipped browser frontend lives in `web/` and is embedded from `web/dist`. Go remains responsible for routing, auth, CSRF, persistence, and operational endpoints.
 
-Phase 2 added a parallel JSON API surface under `/api/*` for auth state and user CRUD contracts. Those contracts now back both Astro development and the shipped embedded frontend. The remaining legacy browser surface is the old auth and `/users` mutation submit path plus the Templ rendering code that still supports it during the retirement phase.
+## Runtime Boundaries
 
-## Request Flow
+### Browser pages
 
-1. Echo receives the request.
-2. Middleware applies recovery, security headers, request normalization, CSRF, request IDs, logging, rate limiting, and timeout handling.
-3. Session middleware loads the current user, if any.
-4. Handlers validate input, call the store, and return embedded Astro HTML, JSON, or temporary legacy Templ responses depending on the route surface.
+- Public pages: `/`, `/auth/login`, `/auth/register`, `/auth/logout`
+- Protected pages: `/profile`, `/users`
+- Static frontend assets: `/_astro/*`
 
-## Route Split
+These pages are served from the embedded Astro build.
 
-- Public embedded Astro pages: `/`, `/auth/login`, `/auth/register`, `/auth/logout`, and `/_astro/*` assets
-- Public backend utility routes: `/demo`, `/health`, and `/static/*`
-- Public JSON API: auth state, login, registration, logout
-- Protected embedded Astro pages: `/profile` and `/users`
-- Temporary legacy mutation routes: `POST /auth/*`, `POST /users`, `PUT /users/:id`, `PATCH /users/:id/deactivate`, and `DELETE /users/:id`
-- Protected JSON API: `/api/users`, `/api/users/count`, `/api/users/:id`, create, update, deactivate, and delete
+### Browser form fallback submits
 
-## Configuration Flow
+These remain as plain redirect-oriented browser endpoints for auth flows:
 
-Configuration is loaded by [`internal/config/config.go`](../internal/config/config.go) in this order:
+- `POST /auth/login`
+- `POST /auth/register`
+- `POST /auth/logout`
 
-1. Built-in defaults
-2. `.env`
-3. `config.yaml` or `config/config.yaml`
-4. Environment variables
+### JSON API contracts
 
-Environment variables win last.
+- Auth: `/api/auth/state`, `/api/auth/login`, `/api/auth/register`, `/api/auth/logout`
+- Users: `/api/users`, `/api/users/count`, `/api/users/:id`, plus create, update, deactivate, and delete
+
+### Utility endpoints
+
+- `GET /demo`
+- `GET /health`
+
+These now return JSON only.
 
 ## Repo Layout
 
 | Path | Purpose |
 | --- | --- |
-| [`cmd/web/main.go`](../cmd/web/main.go) | App bootstrap, middleware stack, config wiring, and graceful shutdown |
-| [`internal/handler/`](../internal/handler/) | Route handlers and response helpers |
-| [`internal/middleware/`](../internal/middleware/) | Auth, CSRF, error, validation, and normalization middleware |
-| [`internal/store/`](../internal/store/) | Database pool setup, SQLC queries, schema, and store methods |
-| [`internal/view/`](../internal/view/) | Temporary Templ components and layouts that still back the legacy submit path |
-| [`internal/ui/static/`](../internal/ui/static/) | Embedded CSS, JS, images, and favicon for the legacy frontend |
-| [`web/`](../web/) | Astro + Vue + Bun frontend workspace plus the committed shipped `dist/` output |
-| [`migrations/`](../migrations/) | Atlas-managed SQL migrations |
-| [`docs/`](./) | User-facing repo documentation |
+| [`cmd/web/`](../cmd/web/) | App entrypoint and startup wiring |
+| [`internal/handler/`](../internal/handler/) | Echo handlers, API contracts, frontend serving, and route registration |
+| [`internal/middleware/`](../internal/middleware/) | Sessions, CSRF, auth, timeouts, errors, security headers |
+| [`internal/store/`](../internal/store/) | Database access, SQLC output, schema bootstrap, and migrations wiring |
+| [`internal/ui/`](../internal/ui/) | Embedded backend-owned static assets such as the favicon |
+| [`web/`](../web/) | Astro + Vue + TypeScript + Bun frontend workspace |
+| [`web/dist/`](../web/dist/) | Built frontend committed for embedding into the Go binary |
+| [`migrations/`](../migrations/) | Canonical Atlas migrations |
+| [`scripts/`](../scripts/) | Browser smoke and runtime smoke validation |
+| [`magefile.go`](../magefile.go) | Developer and CI task runner |
 
-## Schema and Migration Sources
+## Important Constraints
 
-- [`internal/store/schema.sql`](../internal/store/schema.sql) is the canonical schema definition used by Atlas.
-- [`internal/store/store.go`](../internal/store/store.go) contains a matching bootstrap path for local startup.
-- Top-level [`migrations/`](../migrations/) is the canonical migration directory.
-
-The duplicate [`internal/store/migrations/`](../internal/store/migrations/) directory still exists, but the app and docs should treat top-level [`migrations/`](../migrations/) as the source of truth.
+- Same-origin session cookies are the auth model.
+- CSRF stays enforced on state-changing requests.
+- PostgreSQL remains canonical.
+- The browser frontend talks to boring JSON contracts instead of fragment-shaped UI responses.
+- Release shape stays boring: one Go service, one database, one embedded frontend build.

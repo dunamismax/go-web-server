@@ -5,11 +5,9 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/dunamismax/go-web-server/internal/middleware"
 	"github.com/dunamismax/go-web-server/internal/store"
-	"github.com/dunamismax/go-web-server/internal/view"
 	"github.com/jackc/pgx/v5"
 	"github.com/labstack/echo/v4"
 )
@@ -201,152 +199,6 @@ func (h *UserHandler) updateManagedUser(c echo.Context, id int64) (store.User, e
 		"request_id", c.Response().Header().Get(echo.HeaderXRequestID))
 
 	return user, nil
-}
-
-func (h *UserHandler) legacyUserListState(ctx context.Context) ([]store.User, int64, error) {
-	users, err := h.listUsers(ctx)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return users, int64(len(users)), nil
-}
-
-func (h *UserHandler) legacyUserFormState(c echo.Context, ctx context.Context) (bool, *store.User, error) {
-	if editID := c.QueryParam("edit"); editID != "" {
-		id, err := strconv.ParseInt(editID, 10, 64)
-		if err != nil {
-			return false, nil, middleware.NewAppError(
-				middleware.ErrorTypeValidation,
-				http.StatusBadRequest,
-				"Invalid edit user ID",
-			).WithContext(c).WithInternal(err)
-		}
-
-		user, err := h.store.GetUser(ctx, id)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return false, nil, notFoundError(c, "User not found")
-			}
-
-			return false, nil, logAndReturnError(c, "fetch user", err, http.StatusInternalServerError, "Failed to fetch user")
-		}
-
-		return true, &user, nil
-	}
-
-	if c.QueryParam("form") == "create" {
-		return true, nil, nil
-	}
-
-	return false, nil, nil
-}
-
-func (h *UserHandler) renderLegacyUserManagement(c echo.Context, ctx context.Context, showForm bool, formUser *store.User) error {
-	token := setupCSRFHeaders(c)
-	users, count, err := h.legacyUserListState(ctx)
-	if err != nil {
-		return logAndReturnError(c, "fetch updated users", err, http.StatusInternalServerError, "Failed to fetch updated users")
-	}
-
-	return view.UsersContent(users, count, showForm, formUser, token).Render(ctx, c.Response().Writer)
-}
-
-// Users renders the main user management page.
-func (h *UserHandler) Users(c echo.Context) error {
-	ctx := c.Request().Context()
-	token := setupCSRFHeaders(c)
-
-	showForm, formUser, err := h.legacyUserFormState(c, ctx)
-	if err != nil {
-		return err
-	}
-
-	users, count, err := h.legacyUserListState(ctx)
-	if err != nil {
-		return logAndReturnError(c, "fetch users", err, http.StatusInternalServerError, "Failed to fetch users")
-	}
-
-	return renderWithCSRF(c,
-		view.UsersContent(users, count, showForm, formUser, token),
-		view.UsersWithCSRF(users, count, showForm, formUser, token),
-		view.Users(users, count, showForm, formUser),
-	)
-}
-
-// CreateUser creates a new user for the legacy HTMX screen.
-func (h *UserHandler) CreateUser(c echo.Context) error {
-	ctx := c.Request().Context()
-
-	if _, err := h.createManagedUser(c); err != nil {
-		return err
-	}
-
-	c.Response().Header().Set(HtmxTrigger, "userCreated")
-
-	return h.renderLegacyUserManagement(c, ctx, false, nil)
-}
-
-// UpdateUser updates an existing user for the legacy HTMX screen.
-func (h *UserHandler) UpdateUser(c echo.Context) error {
-	ctx := c.Request().Context()
-
-	id, err := parseIDParam(c)
-	if err != nil {
-		return err
-	}
-
-	if _, err := h.updateManagedUser(c, id); err != nil {
-		return databaseWriteError(c, err, "Failed to update user")
-	}
-
-	c.Response().Header().Set(HtmxTrigger, "userUpdated")
-
-	return h.renderLegacyUserManagement(c, ctx, false, nil)
-}
-
-// DeactivateUser deactivates a user instead of deleting for the legacy HTMX screen.
-func (h *UserHandler) DeactivateUser(c echo.Context) error {
-	ctx := c.Request().Context()
-
-	id, err := parseIDParam(c)
-	if err != nil {
-		return err
-	}
-
-	if err := h.store.DeactivateUser(ctx, id); err != nil {
-		return logAndReturnError(c, "deactivate user", err, http.StatusInternalServerError, "Failed to deactivate user")
-	}
-
-	slog.Info("User deactivated successfully",
-		"id", id,
-		"request_id", c.Response().Header().Get(echo.HeaderXRequestID))
-
-	c.Response().Header().Set(HtmxTrigger, "userDeactivated")
-
-	return h.renderLegacyUserManagement(c, ctx, false, nil)
-}
-
-// DeleteUser permanently deletes a user for the legacy HTMX screen.
-func (h *UserHandler) DeleteUser(c echo.Context) error {
-	ctx := c.Request().Context()
-
-	id, err := parseIDParam(c)
-	if err != nil {
-		return err
-	}
-
-	if err := h.store.DeleteUser(ctx, id); err != nil {
-		return logAndReturnError(c, "delete user", err, http.StatusInternalServerError, "Failed to delete user")
-	}
-
-	slog.Info("User deleted successfully",
-		"id", id,
-		"request_id", c.Response().Header().Get(echo.HeaderXRequestID))
-
-	c.Response().Header().Set(HtmxTrigger, "userDeleted")
-
-	return h.renderLegacyUserManagement(c, ctx, false, nil)
 }
 
 // ListUsersAPI returns the active user list as JSON.

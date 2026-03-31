@@ -25,9 +25,7 @@ import (
 	echomiddleware "github.com/labstack/echo/v4/middleware"
 )
 
-//go:generate go install github.com/a-h/templ/cmd/templ@v0.3.1001
 //go:generate go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.30.0
-//go:generate sh -c "cd ../../ && templ generate"
 //go:generate sh -c "cd ../../ && sqlc generate"
 
 func main() {
@@ -206,7 +204,7 @@ func main() {
 
 	// Request deadline middleware.
 	// We avoid Echo's Timeout middleware here because it swaps the response writer
-	// and breaks templ rendering for full-page HTML responses.
+	// and breaks response handling for full-page HTML and streaming responses.
 	e.Use(middleware.RequestTimeout(cfg.Server.ReadTimeout))
 
 	// Add environment to context for error handling

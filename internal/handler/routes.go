@@ -73,10 +73,6 @@ func RegisterRoutes(e *echo.Echo, handlers *Handlers) error {
 	// User management routes
 	users := e.Group("/users", requireAuth)
 	users.GET("", frontend.Page("users/index.html"))
-	users.POST("", handlers.User.CreateUser)
-	users.PUT("/:id", handlers.User.UpdateUser)
-	users.PATCH("/:id/deactivate", handlers.User.DeactivateUser)
-	users.DELETE("/:id", handlers.User.DeleteUser)
 
 	// API routes
 	apiAuth := e.Group("/api/auth")

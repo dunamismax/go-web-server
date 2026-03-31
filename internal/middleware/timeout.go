@@ -9,7 +9,7 @@ import (
 )
 
 // RequestTimeout adds a deadline to the request context without swapping the response writer.
-// This avoids the incompatibilities in Echo's Timeout middleware for templ-rendered responses.
+// This avoids the incompatibilities in Echo's Timeout middleware for streaming or HTML-oriented responses.
 func RequestTimeout(timeout time.Duration) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
