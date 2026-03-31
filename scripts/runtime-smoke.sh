@@ -175,23 +175,16 @@ if [[ "${users_status}" != "200" ]]; then
   exit 1
 fi
 
-users_list_status="$(curl -sS \
-  -o "${WORK_DIR}/users-list.html" \
-  -w '%{http_code}' \
-  -b "${COOKIE_JAR}" \
-  -H 'HX-Request: true' \
-  "${BASE_URL}/users/list")"
-if [[ "${users_list_status}" != "200" ]]; then
-  echo "users list request failed with status ${users_list_status}" >&2
-  cat "${WORK_DIR}/users-list.html" >&2 || true
-  cat "${APP_LOG}" >&2 || true
+if ! grep -q "${REGISTER_EMAIL}" "${WORK_DIR}/users.html"; then
+  echo "users page did not include registered email ${REGISTER_EMAIL}" >&2
+  cat "${WORK_DIR}/users.html" >&2 || true
   exit 1
 fi
 
-if ! grep -q "${REGISTER_EMAIL}" "${WORK_DIR}/users-list.html"; then
-  echo "users list did not include registered email ${REGISTER_EMAIL}" >&2
-  cat "${WORK_DIR}/users-list.html" >&2 || true
+if grep -q '/users/list' "${WORK_DIR}/users.html"; then
+  echo "users page still referenced retired /users/list fragment" >&2
+  cat "${WORK_DIR}/users.html" >&2 || true
   exit 1
 fi
 
-echo "runtime smoke passed: registration, session auth, protected pages, HTMX user list, and database-backed health all succeeded"
+echo "runtime smoke passed: registration, session auth, protected pages, inline legacy users screen, and database-backed health all succeeded"

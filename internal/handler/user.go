@@ -202,41 +202,39 @@ func (h *UserHandler) updateManagedUser(c echo.Context, id int64) (store.User, e
 	return user, nil
 }
 
-// Users renders the main user management page.
-func (h *UserHandler) Users(c echo.Context) error {
-	token := setupCSRFHeaders(c)
+func (h *UserHandler) legacyUserListState(ctx context.Context) ([]store.User, int64, error) {
+	users, err := h.listUsers(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
 
-	return renderWithCSRF(c,
-		view.UsersContent(),       // HTMX component
-		view.UsersWithCSRF(token), // Full page component with CSRF
-		view.Users(),              // Basic component
-	)
+	return users, int64(len(users)), nil
 }
 
-// UserList returns the list of users as HTML fragment.
-func (h *UserHandler) UserList(c echo.Context) error {
-	ctx := c.Request().Context()
-	setupCSRFHeaders(c)
+func (h *UserHandler) renderLegacyUserList(c echo.Context, ctx context.Context) error {
+	users, count, err := h.legacyUserListState(ctx)
+	if err != nil {
+		return logAndReturnError(c, "fetch updated users", err, http.StatusInternalServerError, "Failed to fetch updated users")
+	}
 
-	users, err := h.listUsers(ctx)
+	return view.UserListSwap(users, count).Render(ctx, c.Response().Writer)
+}
+
+// Users renders the main user management page.
+func (h *UserHandler) Users(c echo.Context) error {
+	ctx := c.Request().Context()
+	token := setupCSRFHeaders(c)
+
+	users, count, err := h.legacyUserListState(ctx)
 	if err != nil {
 		return logAndReturnError(c, "fetch users", err, http.StatusInternalServerError, "Failed to fetch users")
 	}
 
-	return view.UserList(users).Render(ctx, c.Response().Writer)
-}
-
-// UserCountFragment returns the count of active users as an HTML fragment for the legacy screen.
-func (h *UserHandler) UserCountFragment(c echo.Context) error {
-	ctx := c.Request().Context()
-	setupCSRFHeaders(c)
-
-	count, err := h.countUsers(ctx)
-	if err != nil {
-		return logAndReturnError(c, "count users", err, http.StatusInternalServerError, "Failed to count users")
-	}
-
-	return view.UserCount(count).Render(ctx, c.Response().Writer)
+	return renderWithCSRF(c,
+		view.UsersContent(users, count),         // HTMX component
+		view.UsersWithCSRF(users, count, token), // Full page component with CSRF
+		view.Users(users, count),                // Basic component
+	)
 }
 
 // UserForm renders the user creation/edit form.
@@ -273,12 +271,7 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 
 	c.Response().Header().Set(HtmxTrigger, "userCreated")
 
-	users, err := h.listUsers(ctx)
-	if err != nil {
-		return logAndReturnError(c, "fetch updated users", err, http.StatusInternalServerError, "Failed to fetch updated users")
-	}
-
-	return view.UserList(users).Render(ctx, c.Response().Writer)
+	return h.renderLegacyUserList(c, ctx)
 }
 
 // UpdateUser updates an existing user for the legacy HTMX screen.
@@ -296,12 +289,7 @@ func (h *UserHandler) UpdateUser(c echo.Context) error {
 
 	c.Response().Header().Set(HtmxTrigger, "userUpdated")
 
-	users, err := h.listUsers(ctx)
-	if err != nil {
-		return logAndReturnError(c, "fetch updated users", err, http.StatusInternalServerError, "Failed to fetch updated users")
-	}
-
-	return view.UserList(users).Render(ctx, c.Response().Writer)
+	return h.renderLegacyUserList(c, ctx)
 }
 
 // DeactivateUser deactivates a user instead of deleting for the legacy HTMX screen.
@@ -323,12 +311,7 @@ func (h *UserHandler) DeactivateUser(c echo.Context) error {
 
 	c.Response().Header().Set(HtmxTrigger, "userDeactivated")
 
-	users, err := h.listUsers(ctx)
-	if err != nil {
-		return logAndReturnError(c, "fetch updated users", err, http.StatusInternalServerError, "Failed to fetch updated users")
-	}
-
-	return view.UserList(users).Render(ctx, c.Response().Writer)
+	return h.renderLegacyUserList(c, ctx)
 }
 
 // DeleteUser permanently deletes a user for the legacy HTMX screen.
@@ -350,7 +333,7 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 
 	c.Response().Header().Set(HtmxTrigger, "userDeleted")
 
-	return c.NoContent(http.StatusOK)
+	return h.renderLegacyUserList(c, ctx)
 }
 
 // ListUsersAPI returns the active user list as JSON.

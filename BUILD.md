@@ -56,8 +56,6 @@ Authenticated:
 
 - `/profile`
 - `/users`
-- `/users/list`
-- `/users/count`
 - `/users/form`
 - `/users/:id/edit`
 - `/users` `POST`
@@ -166,7 +164,7 @@ Backend responsibilities after migration:
 - [x] **Phase 2 - Normalize backend contracts**
   - [x] Explicit frontend-facing contracts exist for auth state, user list, create, edit, deactivate, delete, and count.
   - [x] `/api/*` naming reflects reality.
-    - `/api/users/count` now returns JSON and the legacy HTML fragment moved to `/users/count`.
+    - `/api/users/count` now returns JSON. The temporary legacy HTML fragment path used during the transition has since been retired.
   - [x] Current CSRF expectations are documented for browser requests in `docs/api.md`.
   - [x] Endpoint docs are complete enough that later frontend agents can work without reading Templ templates or handler code.
     - `docs/api.md` now documents the Phase 2 JSON contract surface and the remaining legacy routes explicitly.
@@ -190,6 +188,7 @@ Backend responsibilities after migration:
 
 - [ ] **Phase 5 - Retire the legacy frontend stack**
   - [ ] Templ views and handlers that only existed for the old browser UI are removed.
+    - `/users/list` and `/users/count` are now gone. The remaining legacy-only `/users` surface is the inline HTMX page plus `/users/form`, `/users/:id/edit`, and the legacy mutation submits.
   - [ ] HTMX is removed from shipped browser behavior.
   - [ ] npm and Tailwind legacy build steps are removed from the active frontend path.
   - [ ] `internal/ui/static/` is simplified to backend-owned assets only.
@@ -241,6 +240,7 @@ Non-negotiables:
 - [x] CI validates the combined backend + web shape.
 - [ ] Repo docs match the final migrated reality.
 - [ ] Legacy Templ + HTMX frontend machinery is gone.
+  - The legacy `/users` screen no longer bootstraps through `/users/list` and `/users/count`, but the remaining HTMX form and mutation path still exists.
 - [ ] `BUILD.md` can be removed because the migration is over.
 
 ## Final Guidance

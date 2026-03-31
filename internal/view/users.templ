@@ -7,19 +7,19 @@ import (
 	"strconv"
 )
 
-templ Users() {
+templ Users(users []store.User, count int64) {
 	@layout.Base("Users") {
-		@UsersContent()
+		@UsersContent(users, count)
 	}
 }
 
-templ UsersWithCSRF(csrfToken string) {
+templ UsersWithCSRF(users []store.User, count int64, csrfToken string) {
 	@layout.BaseWithCSRF("Users", csrfToken) {
-		@UsersContent()
+		@UsersContent(users, count)
 	}
 }
 
-templ UsersContent() {
+templ UsersContent(users []store.User, count int64) {
 	<section>
 		<hgroup>
 			<h1>User Management</h1>
@@ -28,7 +28,7 @@ templ UsersContent() {
 		<div class="grid">
 			<div>
 				<p>
-					<strong>Users:</strong> <span id="user-count" hx-get="/users/count" hx-trigger="load, userCreated from:body, userDeleted from:body, userDeactivated from:body">-</span>
+					<strong>Users:</strong> <span id="user-count">{ strconv.FormatInt(count, 10) }</span>
 				</p>
 			</div>
 			<div style="text-align: right;">
@@ -44,18 +44,16 @@ templ UsersContent() {
 		</div>
 	</section>
 	<section>
-		<div
-			hx-get="/users/list"
-			hx-trigger="load, userCreated from:body, userDeleted from:body, userDeactivated from:body"
-			hx-swap="innerHTML"
-			id="user-list-container"
-		>
-			<article aria-busy="true">
-				<header><h4>Loading users...</h4></header>
-			</article>
+		<div id="user-list-container">
+			@UserList(users)
 		</div>
 	</section>
 	<div id="user-form-modal"></div>
+}
+
+templ UserListSwap(users []store.User, count int64) {
+	@UserCountOOB(count)
+	@UserList(users)
 }
 
 templ UserList(users []store.User) {
@@ -148,8 +146,8 @@ templ UserRow(user store.User) {
 				}
 				<button
 					hx-delete={ "/users/" + strconv.FormatInt(user.ID, 10) }
-					hx-target={ "#user-" + strconv.FormatInt(user.ID, 10) }
-					hx-swap="outerHTML"
+					hx-target="#user-list-container"
+					hx-swap="innerHTML"
 					hx-confirm="Are you sure you want to permanently delete this user?"
 					class="outline"
 					style="padding: 0.25rem 0.5rem; color: #dc2626;"
@@ -291,8 +289,8 @@ templ UserForm(user *store.User, csrfToken string) {
 	</article>
 }
 
-templ UserCount(count int64) {
-	{ strconv.FormatInt(count, 10) }
+templ UserCountOOB(count int64) {
+	<span id="user-count" hx-swap-oob="true">{ strconv.FormatInt(count, 10) }</span>
 }
 
 func formatTimeFromPgTimestamptz(ts pgtype.Timestamptz) string {

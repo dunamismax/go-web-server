@@ -401,7 +401,44 @@ func TestDeleteUserAPIReturnsNotFoundWhenMissing(t *testing.T) {
 	}
 }
 
-func TestUserCountHandlersSplitJSONAndHTMLContracts(t *testing.T) {
+func TestUsersPageRendersInlineLegacyData(t *testing.T) {
+	t.Parallel()
+
+	handler := &UserHandler{
+		store: &mockStore{
+			listUsersFn: func(context.Context) ([]store.User, error) {
+				return []store.User{sampleStoreUser(7, true)}, nil
+			},
+		},
+		authService: &mockAuthService{},
+	}
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/users", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.Set("csrf", testCSRFToken)
+
+	if err := handler.Users(c); err != nil {
+		t.Fatalf("Users() error = %v", err)
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, "user@example.com") {
+		t.Fatalf("users page did not include user email: %q", body)
+	}
+	if !strings.Contains(body, `id="user-count"`) || !strings.Contains(body, ">1</span>") {
+		t.Fatalf("users page did not include inline count: %q", body)
+	}
+	if strings.Contains(body, "/users/list") {
+		t.Fatalf("users page still referenced retired /users/list fragment: %q", body)
+	}
+	if strings.Contains(body, "/users/count") {
+		t.Fatalf("users page still referenced retired /users/count fragment: %q", body)
+	}
+}
+
+func TestUserCountAPIReturnsJSONContract(t *testing.T) {
 	t.Parallel()
 
 	handler := &UserHandler{
@@ -413,47 +450,21 @@ func TestUserCountHandlersSplitJSONAndHTMLContracts(t *testing.T) {
 		authService: &mockAuthService{},
 	}
 
-	t.Run("api", func(t *testing.T) {
-		t.Parallel()
+	c, rec := newJSONContext(t, http.MethodGet, "/api/users/count", "")
+	if err := handler.UserCountAPI(c); err != nil {
+		t.Fatalf("UserCountAPI() error = %v", err)
+	}
 
-		c, rec := newJSONContext(t, http.MethodGet, "/api/users/count", "")
-		if err := handler.UserCountAPI(c); err != nil {
-			t.Fatalf("UserCountAPI() error = %v", err)
-		}
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
 
-		if rec.Code != http.StatusOK {
-			t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
-		}
+	var resp apiUserCountResponse
+	mustDecodeJSON(t, rec.Body, &resp)
 
-		var resp apiUserCountResponse
-		mustDecodeJSON(t, rec.Body, &resp)
-
-		if resp.Count != 3 {
-			t.Fatalf("count = %d, want 3", resp.Count)
-		}
-	})
-
-	t.Run("fragment", func(t *testing.T) {
-		t.Parallel()
-
-		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/users/count", nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.Set("csrf", testCSRFToken)
-
-		if err := handler.UserCountFragment(c); err != nil {
-			t.Fatalf("UserCountFragment() error = %v", err)
-		}
-
-		if strings.Contains(rec.Body.String(), "\"count\"") {
-			t.Fatalf("fragment body unexpectedly looked like JSON: %q", rec.Body.String())
-		}
-
-		if strings.TrimSpace(rec.Body.String()) != "3" {
-			t.Fatalf("fragment body = %q, want rendered count", rec.Body.String())
-		}
-	})
+	if resp.Count != 3 {
+		t.Fatalf("count = %d, want 3", resp.Count)
+	}
 }
 
 func TestGetUserAPIReturnsNotFoundForMissingRecord(t *testing.T) {
