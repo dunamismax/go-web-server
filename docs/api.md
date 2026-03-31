@@ -400,7 +400,7 @@ Error cases:
 
 ## Legacy HTML and HTMX routes that still exist
 
-These routes still power the shipped browser UI. They remain in place while the remaining legacy HTMX path is retired. The `/users` page now renders its current count and list inline, so the old `/users/list` and `/users/count` bootstrap fragments are gone.
+These routes still power the shipped browser UI. They remain in place while the remaining legacy HTMX path is retired. The `/users` page now owns its inline create and edit form state and renders its current count and list inline, so the old `/users/list`, `/users/count`, `/users/form`, and `/users/:id/edit` fragments are gone.
 
 | Method | Path | Response shape | Notes |
 | --- | --- | --- | --- |
@@ -413,9 +413,7 @@ These routes still power the shipped browser UI. They remain in place while the 
 | `POST` | `/auth/register` | Redirect or HTMX redirect payload | Legacy registration submit |
 | `POST` | `/auth/logout` | Redirect or HTMX redirect payload | Legacy logout submit |
 | `GET` | `/profile` | HTML page or HTMX fragment | Legacy profile page |
-| `GET` | `/users` | HTML page or HTMX fragment | Legacy users screen with inline list and count rendering |
-| `GET` | `/users/form` | HTML fragment | Legacy create form fragment |
-| `GET` | `/users/:id/edit` | HTML fragment | Legacy edit form fragment |
+| `GET` | `/users` | HTML page or HTMX fragment | Legacy users screen with inline list, count, and inline form state rendering |
 | `POST` | `/users` | HTML fragment | Legacy create submit |
 | `PUT` | `/users/:id` | HTML fragment | Legacy update submit |
 | `PATCH` | `/users/:id/deactivate` | HTML fragment | Legacy deactivate submit |

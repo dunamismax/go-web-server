@@ -62,8 +62,6 @@ func RegisterRoutes(e *echo.Echo, handlers *Handlers) error {
 	// User management routes
 	users := e.Group("/users", requireAuth)
 	users.GET("", handlers.User.Users)
-	users.GET("/form", handlers.User.UserForm)
-	users.GET("/:id/edit", handlers.User.EditUserForm)
 	users.POST("", handlers.User.CreateUser)
 	users.PUT("/:id", handlers.User.UpdateUser)
 	users.PATCH("/:id/deactivate", handlers.User.DeactivateUser)

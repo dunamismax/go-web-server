@@ -14,7 +14,7 @@ It exists so the migration can move route by route without pretending the legacy
 - **Phase 3 result:** the staged Astro workspace now covers home, login, registration, logout, and profile flows
 - **Phase 4 result:** the staged Astro workspace now also covers the protected `/users` CRUD surface through the JSON contracts
 - **Phase 6 slice now in place:** CI runs frontend install, check, build, mocked e2e coverage, and a real Astro browser smoke flow
-- **Latest legacy slice:** `/users` now server-renders its active count and current list inline, so `/users/list` and `/users/count` are retired
+- **Latest legacy slice:** `/users` now owns its inline create and edit form state and server-renders its active count and current list inline, so `/users/list`, `/users/count`, `/users/form`, and `/users/:id/edit` are retired
 - **Next required phase after this doc:** retire the remaining legacy browser stack only after the Astro CRUD path has enough verification
 
 ## Route inventory
@@ -30,9 +30,7 @@ It exists so the migration can move route by route without pretending the legacy
 | `POST /auth/register` | public | redirect or HTMX redirect payload | Legacy submit stays until the primary browser path flips |
 | `POST /auth/logout` | protected session in practice | redirect or HTMX redirect payload | Legacy submit stays until the primary browser path flips |
 | `GET /profile` | protected | page or HTMX fragment | Astro parity now exists in `web/` with client-side unauthenticated redirect handling |
-| `GET /users` | protected | page or HTMX fragment | Astro parity now exists in `web/` against the `/api/users/*` contracts. The legacy page now renders its list and count inline instead of bootstrapping through separate fragments. |
-| `GET /users/form` | protected | HTMX fragment | Legacy fragment surface, no longer needed by the staged Astro CRUD path |
-| `GET /users/:id/edit` | protected | HTMX fragment | Legacy fragment surface, no longer needed by the staged Astro CRUD path |
+| `GET /users` | protected | page or HTMX fragment | Astro parity now exists in `web/` against the `/api/users/*` contracts. The legacy page now renders its list, count, and inline form state itself instead of bootstrapping through separate fragments. |
 | `POST /users` | protected | HTMX fragment | Legacy submit kept in place until the legacy browser path is retired |
 | `PUT /users/:id` | protected | HTMX fragment | Legacy submit kept in place until the legacy browser path is retired |
 | `PATCH /users/:id/deactivate` | protected | HTMX fragment | Legacy submit kept in place until the legacy browser path is retired |

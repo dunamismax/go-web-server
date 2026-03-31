@@ -187,4 +187,22 @@ if grep -q '/users/list' "${WORK_DIR}/users.html"; then
   exit 1
 fi
 
+if grep -q '/users/count' "${WORK_DIR}/users.html"; then
+  echo "users page still referenced retired /users/count fragment" >&2
+  cat "${WORK_DIR}/users.html" >&2 || true
+  exit 1
+fi
+
+if grep -q '/users/form' "${WORK_DIR}/users.html"; then
+  echo "users page still referenced retired /users/form fragment" >&2
+  cat "${WORK_DIR}/users.html" >&2 || true
+  exit 1
+fi
+
+if grep -Eq '/users/[0-9]+/edit' "${WORK_DIR}/users.html"; then
+  echo "users page still referenced retired /users/:id/edit fragment" >&2
+  cat "${WORK_DIR}/users.html" >&2 || true
+  exit 1
+fi
+
 echo "runtime smoke passed: registration, session auth, protected pages, inline legacy users screen, and database-backed health all succeeded"

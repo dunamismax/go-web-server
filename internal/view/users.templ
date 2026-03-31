@@ -7,53 +7,54 @@ import (
 	"strconv"
 )
 
-templ Users(users []store.User, count int64) {
+templ Users(users []store.User, count int64, showForm bool, formUser *store.User) {
 	@layout.Base("Users") {
-		@UsersContent(users, count)
+		@UsersContent(users, count, showForm, formUser, "")
 	}
 }
 
-templ UsersWithCSRF(users []store.User, count int64, csrfToken string) {
+templ UsersWithCSRF(users []store.User, count int64, showForm bool, formUser *store.User, csrfToken string) {
 	@layout.BaseWithCSRF("Users", csrfToken) {
-		@UsersContent(users, count)
+		@UsersContent(users, count, showForm, formUser, csrfToken)
 	}
 }
 
-templ UsersContent(users []store.User, count int64) {
-	<section>
-		<hgroup>
-			<h1>User Management</h1>
-			<p>Manage users with real-time updates powered by HTMX</p>
-		</hgroup>
-		<div class="grid">
-			<div>
-				<p>
-					<strong>Users:</strong> <span id="user-count">{ strconv.FormatInt(count, 10) }</span>
-				</p>
+templ UsersContent(users []store.User, count int64, showForm bool, formUser *store.User, csrfToken string) {
+	<div id="legacy-user-management">
+		<section>
+			<hgroup>
+				<h1>User Management</h1>
+				<p>Manage users with real-time updates powered by HTMX</p>
+			</hgroup>
+			<div class="grid">
+				<div>
+					<p>
+						<strong>Users:</strong> <span id="user-count">{ strconv.FormatInt(count, 10) }</span>
+					</p>
+				</div>
+				<div style="text-align: right;">
+					<button
+						hx-get="/users?form=create"
+						hx-target="#legacy-user-management"
+						hx-swap="outerHTML"
+						class="contrast"
+					>
+						Add New User
+					</button>
+				</div>
 			</div>
-			<div style="text-align: right;">
-				<button
-					hx-get="/users/form"
-					hx-target="#user-form-modal"
-					hx-swap="innerHTML"
-					class="contrast"
-				>
-					Add New User
-				</button>
+		</section>
+		if showForm {
+			<section>
+				@UserForm(formUser, csrfToken)
+			</section>
+		}
+		<section>
+			<div id="user-list-container">
+				@UserList(users)
 			</div>
-		</div>
-	</section>
-	<section>
-		<div id="user-list-container">
-			@UserList(users)
-		</div>
-	</section>
-	<div id="user-form-modal"></div>
-}
-
-templ UserListSwap(users []store.User, count int64) {
-	@UserCountOOB(count)
-	@UserList(users)
+		</section>
+	</div>
 }
 
 templ UserList(users []store.User) {
@@ -124,9 +125,9 @@ templ UserRow(user store.User) {
 		<td>
 			<div role="group">
 				<button
-					hx-get={ "/users/" + strconv.FormatInt(user.ID, 10) + "/edit" }
-					hx-target="#user-form-modal"
-					hx-swap="innerHTML"
+					hx-get={ "/users?edit=" + strconv.FormatInt(user.ID, 10) }
+					hx-target="#legacy-user-management"
+					hx-swap="outerHTML"
 					class="outline secondary"
 					style="padding: 0.25rem 0.5rem;"
 				>
@@ -135,8 +136,8 @@ templ UserRow(user store.User) {
 				if user.IsActive != nil && *user.IsActive {
 					<button
 						hx-patch={ "/users/" + strconv.FormatInt(user.ID, 10) + "/deactivate" }
-						hx-target="#user-list-container"
-						hx-swap="innerHTML"
+						hx-target="#legacy-user-management"
+						hx-swap="outerHTML"
 						hx-confirm="Deactivate this user?"
 						class="outline"
 						style="padding: 0.25rem 0.5rem;"
@@ -146,8 +147,8 @@ templ UserRow(user store.User) {
 				}
 				<button
 					hx-delete={ "/users/" + strconv.FormatInt(user.ID, 10) }
-					hx-target="#user-list-container"
-					hx-swap="innerHTML"
+					hx-target="#legacy-user-management"
+					hx-swap="outerHTML"
 					hx-confirm="Are you sure you want to permanently delete this user?"
 					class="outline"
 					style="padding: 0.25rem 0.5rem; color: #dc2626;"
@@ -163,11 +164,6 @@ templ UserForm(user *store.User, csrfToken string) {
 	<article>
 		<header>
 			<h3>{ getFormTitle(user) }</h3>
-			<button
-				aria-label="Close"
-				rel="prev"
-				onclick="document.getElementById('user-form-modal').innerHTML = ''"
-			></button>
 		</header>
 		<form
 			if user != nil {
@@ -175,9 +171,8 @@ templ UserForm(user *store.User, csrfToken string) {
 			} else {
 				hx-post="/users"
 			}
-			hx-target="#user-list-container"
-			hx-swap="innerHTML"
-			hx-on::after-request="if(event.detail.successful) document.getElementById('user-form-modal').innerHTML = ''"
+			hx-target="#legacy-user-management"
+			hx-swap="outerHTML"
 		>
 			<input type="hidden" name="csrf_token" value={ csrfToken }/>
 			<div class="grid">
@@ -275,7 +270,9 @@ templ UserForm(user *store.User, csrfToken string) {
 					<button
 						type="button"
 						class="secondary"
-						onclick="document.getElementById('user-form-modal').innerHTML = ''"
+						hx-get="/users"
+						hx-target="#legacy-user-management"
+						hx-swap="outerHTML"
 					>
 						Cancel
 					</button>
@@ -287,10 +284,6 @@ templ UserForm(user *store.User, csrfToken string) {
 			</footer>
 		</form>
 	</article>
-}
-
-templ UserCountOOB(count int64) {
-	<span id="user-count" hx-swap-oob="true">{ strconv.FormatInt(count, 10) }</span>
 }
 
 func formatTimeFromPgTimestamptz(ts pgtype.Timestamptz) string {

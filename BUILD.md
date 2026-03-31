@@ -56,8 +56,6 @@ Authenticated:
 
 - `/profile`
 - `/users`
-- `/users/form`
-- `/users/:id/edit`
 - `/users` `POST`
 - `/users/:id` `PUT`
 - `/users/:id/deactivate` `PATCH`
@@ -184,11 +182,11 @@ Backend responsibilities after migration:
   - [x] The authenticated CRUD experience works end to end through Astro + Vue.
     - Playwright now covers the staged users route for create, edit, deactivate, and delete flows with mocked backend contracts.
   - [x] HTMX fragments are no longer required for normal user management.
-    - Legacy fragment routes still exist for the shipped browser path, but the staged Astro `/users` flow no longer depends on them.
+    - The staged Astro `/users` flow no longer depends on the legacy fragment routes, and the shipped legacy `/users` page now owns its inline create and edit form state itself.
 
 - [ ] **Phase 5 - Retire the legacy frontend stack**
   - [ ] Templ views and handlers that only existed for the old browser UI are removed.
-    - `/users/list` and `/users/count` are now gone. The remaining legacy-only `/users` surface is the inline HTMX page plus `/users/form`, `/users/:id/edit`, and the legacy mutation submits.
+    - `/users/list`, `/users/count`, `/users/form`, and `/users/:id/edit` are now gone. The remaining legacy-only `/users` surface is the inline HTMX page plus the legacy mutation submits.
   - [ ] HTMX is removed from shipped browser behavior.
   - [ ] npm and Tailwind legacy build steps are removed from the active frontend path.
   - [ ] `internal/ui/static/` is simplified to backend-owned assets only.
@@ -240,7 +238,7 @@ Non-negotiables:
 - [x] CI validates the combined backend + web shape.
 - [ ] Repo docs match the final migrated reality.
 - [ ] Legacy Templ + HTMX frontend machinery is gone.
-  - The legacy `/users` screen no longer bootstraps through `/users/list` and `/users/count`, but the remaining HTMX form and mutation path still exists.
+  - The legacy `/users` screen no longer bootstraps through `/users/list`, `/users/count`, `/users/form`, or `/users/:id/edit`, but the remaining inline HTMX page and mutation path still exist.
 - [ ] `BUILD.md` can be removed because the migration is over.
 
 ## Final Guidance

@@ -26,7 +26,7 @@ Phase 2 added a parallel JSON API surface under `/api/*` for auth state and user
 
 - Public legacy pages: home, demo, health, login, registration, static assets
 - Public JSON API: auth state, login, registration, logout
-- Protected legacy pages and fragments: profile, `/users`, `/users/form`, `/users/:id/edit`, and the legacy CRUD submits
+- Protected legacy pages and fragments: profile, `/users` with inline form state, and the legacy CRUD submits
 - Protected JSON API: `/api/users`, `/api/users/count`, `/api/users/:id`, create, update, deactivate, and delete
 
 ## Configuration Flow
