@@ -167,29 +167,29 @@ func generateTempl() error {
 }
 
 func buildCSS() error {
-	fmt.Println("  Building Tailwind CSS...")
+	fmt.Println("  Building legacy CSS assets...")
 
-	// Check if npm is available
-	if err := sh.Run("which", "npm"); err != nil {
-		fmt.Println("    Warning: npm not found, skipping CSS build")
+	// Check if bun is available
+	if err := sh.Run("which", "bun"); err != nil {
+		fmt.Println("    Warning: bun not found, skipping CSS build")
 		return nil
 	}
 
 	// Check if node_modules exists
 	if _, err := os.Stat("node_modules"); os.IsNotExist(err) {
-		npmCommand := "install"
-		if _, err := os.Stat("package-lock.json"); err == nil {
-			npmCommand = "ci"
+		bunArgs := []string{"install"}
+		if _, err := os.Stat("bun.lock"); err == nil {
+			bunArgs = append(bunArgs, "--frozen-lockfile")
 		}
 
-		fmt.Printf("    Installing npm dependencies with npm %s...\n", npmCommand)
-		if err := sh.RunV("npm", npmCommand); err != nil {
-			return fmt.Errorf("failed to install npm dependencies with npm %s: %w", npmCommand, err)
+		fmt.Println("    Installing Bun dependencies for legacy CSS build...")
+		if err := sh.RunV("bun", bunArgs...); err != nil {
+			return fmt.Errorf("failed to install Bun dependencies for legacy CSS build: %w", err)
 		}
 	}
 
 	// Build CSS
-	return sh.RunV("npm", "run", "build-css")
+	return sh.RunV("bun", "run", "build-css")
 }
 
 func ensureFrontendWorkspace() error {

@@ -135,7 +135,7 @@ onMounted(() => {
       <ul>
         <li>Retire the Templ-only browser views once the Astro CRUD path has enough verification</li>
         <li>Remove HTMX from normal shipped browser behavior</li>
-        <li>Collapse the active frontend toolchain around Bun instead of the legacy npm CSS path</li>
+        <li>Remove the remaining repo-root legacy CSS asset pipeline after the browser cutover</li>
       </ul>
     </article>
   </section>

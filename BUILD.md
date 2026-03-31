@@ -31,7 +31,7 @@ Today the repo is:
 - one Go binary with Echo handlers and middleware
 - PostgreSQL-backed with `pgx/v5`, SQLC, Atlas migrations, and session auth
 - still shipping a **Templ + HTMX** browser path
-- using **Tailwind + DaisyUI + Pico CSS** built via **npm** for the legacy frontend
+- using **Tailwind + DaisyUI + Pico CSS** built via **Bun** for the legacy frontend
 - embedding frontend assets from `internal/ui/static/`
 - carrying a staged **Astro + Vue + Bun** workspace under `web/`
 - returning a mix of full HTML pages, HTMX fragments, redirects, and a little JSON
@@ -78,7 +78,7 @@ Authenticated:
 - Phase 2 now adds parallel JSON contracts under `/api/*` for auth state and managed-user operations
 - session cookies are already same-origin friendly and protected by CSRF middleware
 - generated backend artifacts and built frontend assets are currently checked in
-- local development still needs Node/npm for legacy CSS generation even though `web/` is Bun-based
+- local development now uses Bun for both the staged Astro workspace and the repo-root legacy CSS asset build
 
 ## Target State
 
@@ -193,7 +193,7 @@ Backend responsibilities after migration:
   - [ ] HTMX is removed from shipped browser behavior.
   - [ ] npm and Tailwind legacy build steps are removed from the active frontend path.
   - [ ] `internal/ui/static/` is simplified to backend-owned assets only.
-    - Today `mage generate` still runs `npm run build-css`, legacy Templ views still exist, and checked-in CSS assets are still part of the shipped path.
+    - Today `mage generate` still runs `bun run build-css`, legacy Templ views still exist, and checked-in CSS assets are still part of the shipped path.
 
 - [ ] **Phase 6 - Rewrite docs, CI, and release flow around the new truth**
   - [x] Repo docs now acknowledge the staged `web/` workspace and the migration inventory.
@@ -228,7 +228,7 @@ Non-negotiables:
 - **contract drift:** current handlers mix full pages, fragments, redirects, and JSON
 - **auth regressions:** session-cookie and CSRF behavior are easy to break during frontend rewrites
 - **scope creep:** agents may try to rewrite the backend when the job is really boundary cleanup
-- **toolchain churn:** npm-era CSS assumptions need deliberate removal, not accidental breakage
+- **toolchain churn:** legacy CSS assumptions need deliberate removal, not accidental breakage
 - **docs lag:** if docs and CI do not move with the code, the repo will lie about what it is
 
 ## Acceptance Criteria Status

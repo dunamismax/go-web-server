@@ -111,7 +111,7 @@ Cheap repo-native checks that are worth running when relevant:
 mage frontendCheck
 mage frontendBuild
 mage lint
-npm run build-css
+bun run build-css
 ```
 
 For real browser-path bring-up confidence, run the Astro browser smoke check when Bun and Playwright are available:
@@ -152,7 +152,7 @@ If you still need coverage for the legacy shipped browser path, run the runtime 
 - [`scripts/frontend-smoke.sh`](scripts/frontend-smoke.sh) validates the Astro home, registration, profile, users create and edit, and logout flow against the real Go backend. It uses `DATABASE_URL` when provided or starts a local PostgreSQL container with Docker when it is not.
 - [`scripts/runtime-smoke.sh`](scripts/runtime-smoke.sh) remains the legacy end-to-end starter validation path for the shipped Go-rendered browser flow.
 - Leave `security.trusted_proxies` empty unless the app is actually behind reverse proxies you control.
-- `package-lock.json` is tracked so frontend dependency resolution stays reproducible across contributors and CI.
+- Root `bun.lock` is tracked so the legacy CSS asset build stays reproducible across contributors and CI.
 
 ## Naming Notes
 

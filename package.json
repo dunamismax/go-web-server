@@ -1,6 +1,7 @@
 {
   "name": "go-web-server",
   "version": "4.0.0",
+  "packageManager": "bun@1.3.10",
   "description": "Modern Go web server with Tailwind CSS and DaisyUI",
   "scripts": {
     "build-css": "tailwindcss -i ./input.css -o ./internal/ui/static/css/styles.css --minify && cp ./node_modules/@picocss/pico/css/pico.min.css ./internal/ui/static/css/pico.min.css",

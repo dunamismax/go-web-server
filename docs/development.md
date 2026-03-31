@@ -6,8 +6,7 @@ Run all commands in this guide from the repo root.
 
 - Go `1.26.1`
 - PostgreSQL
-- Node.js and `npm` for the current Tailwind-based legacy frontend build
-- Bun for the staged Astro + Vue frontend workspace under `web/`
+- Bun for both the repo-root legacy CSS asset build and the staged Astro + Vue frontend workspace under `web/`
 - Atlas CLI if you want explicit migration state locally
 
 ## First-Time Local Setup
@@ -127,7 +126,7 @@ mage migrateStatus
 
 Generated Go artifacts and legacy built frontend assets are checked in for reproducible builds and releases. After changing SQL, Templ views, or CSS source, run `mage generate` and commit the resulting updates.
 
-The staged Astro frontend under `web/` uses Bun and keeps its own lockfile. It is not part of `mage generate`.
+The staged Astro frontend under `web/` uses Bun and keeps its own lockfile. The repo root now also tracks `bun.lock` for the legacy CSS asset build that still runs through `mage generate`.
 
 CI reruns `mage generate` and fails if tracked generated files or built assets drift. It also installs Bun dependencies, runs frontend check and build steps, runs mocked Playwright e2e coverage, and then validates both the Astro browser smoke flow and the legacy runtime smoke flow.
 
@@ -155,7 +154,7 @@ Useful repo-native follow-ups:
 mage frontendCheck
 mage frontendBuild
 mage lint
-npm run build-css
+bun run build-css
 ```
 
 When Bun and Playwright are available, run the Astro browser smoke check for real frontend verification:
