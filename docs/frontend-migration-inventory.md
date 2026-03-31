@@ -13,6 +13,7 @@ It exists so the migration can move route by route without pretending the legacy
 - **Phase 2 result:** explicit JSON contracts now exist under `/api/*` for auth state and managed-user CRUD
 - **Phase 3 result:** the staged Astro workspace now covers home, login, registration, logout, and profile flows
 - **Phase 4 result:** the staged Astro workspace now also covers the protected `/users` CRUD surface through the JSON contracts
+- **Phase 6 slice now in place:** CI runs frontend install, check, build, mocked e2e coverage, and a real Astro browser smoke flow
 - **Next required phase after this doc:** retire the legacy browser stack only after the Astro CRUD path has enough verification
 
 ## Route inventory

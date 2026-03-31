@@ -25,7 +25,7 @@ This docs set stays close to the repo that exists today. Start with the developm
 - [`internal/store/migrations/`](../internal/store/migrations/) is legacy history and should not be used as the source of truth.
 - Generated Go code and legacy built frontend assets are checked in. Run `mage generate` after source changes and commit the resulting artifacts.
 - `web/` is now the staged Astro + Vue + Bun workspace for the frontend migration, but the shipped browser path is still the legacy Templ + HTMX app.
-- CI reruns generation, fails if tracked generated files drift, and runs a Docker-backed runtime smoke check.
+- CI reruns generation, fails if tracked generated files drift, runs frontend install, check, build, and mocked Playwright e2e coverage, then runs both the Astro browser smoke flow and the legacy runtime smoke check.
 
 ## Naming Note
 

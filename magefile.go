@@ -379,10 +379,16 @@ func FrontendTest() error {
 	return runFrontendCommand("run", "test")
 }
 
-// FrontendE2E runs the Playwright scaffold.
+// FrontendE2E runs the mocked frontend Playwright suite.
 func FrontendE2E() error {
 	fmt.Println("Running frontend Playwright tests...")
 	return runFrontendCommand("run", "test:e2e")
+}
+
+// FrontendSmoke runs the real Astro browser smoke flow against the Go backend.
+func FrontendSmoke() error {
+	fmt.Println("Running frontend browser smoke check...")
+	return sh.RunV("./scripts/frontend-smoke.sh")
 }
 
 // Clean removes built binaries and generated files
@@ -584,10 +590,10 @@ func MigrateStatus() error {
 	return sh.RunV("atlas", "migrate", "status", "--env", "dev")
 }
 
-// CI runs the complete non-mutating local CI pipeline
+// CI runs the complete non-mutating local CI pipeline.
 func CI() error {
 	fmt.Println("Running complete CI pipeline...")
-	mg.SerialDeps(Generate, Vet, Test, Lint, VulnCheck, buildServer, showBuildInfo)
+	mg.SerialDeps(Generate, FrontendCheck, FrontendBuild, Vet, Test, Lint, VulnCheck, buildServer, showBuildInfo)
 	return nil
 }
 
@@ -645,7 +651,8 @@ Development:
   mage frontendBuild    Build staged Astro frontend
   mage frontendPreview  Preview the staged Astro frontend locally
   mage frontendTest     Run frontend unit tests
-  mage frontendE2E      Run frontend Playwright scaffold
+  mage frontendE2E      Run mocked frontend Playwright tests
+  mage frontendSmoke    Run Astro browser smoke validation against Go
   mage run (r)          Build and run server
   mage build (b)        Build production binary
 
@@ -658,7 +665,7 @@ Quality:
   mage fmt (f)          Format code with goimports and tidy modules
   mage vet (v)          Run go vet static analysis
   mage test (t)         Run go test ./...
-  mage smoke            Run Docker-backed runtime smoke validation
+  mage smoke            Run Docker-backed legacy runtime smoke validation
   mage lint (l)         Run golangci-lint comprehensive linting
   mage vulncheck (vc)   Check for security vulnerabilities
   mage quality (q)      Run main quality checks (vet + test + lint + vulncheck)
@@ -719,6 +726,7 @@ var Aliases = map[string]interface{}{
 	"fd": FrontendDev,
 	"fc": FrontendCheck,
 	"fb": FrontendBuild,
+	"fs": FrontendSmoke,
 	"c":  Clean,
 	"s":  Setup,
 	"q":  Quality,

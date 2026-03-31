@@ -56,7 +56,13 @@ mage frontendDev
 
 By default the Astro dev server listens on `http://127.0.0.1:4321` and proxies `/_backend/*` to the Go app on `http://127.0.0.1:8080`. The staged frontend now includes home plus the login, registration, logout, profile, and users flows.
 
-8. Optional but recommended: prove the starter flow end to end with the Docker-backed runtime smoke check:
+8. Optional but recommended: prove the Astro browser path end to end with the real frontend smoke check:
+
+```bash
+mage frontendSmoke
+```
+
+9. If you also want coverage for the current shipped legacy browser path, run the Docker-backed runtime smoke check:
 
 ```bash
 mage smoke
@@ -88,12 +94,13 @@ See:
 | `mage frontendDev` | Run the staged Astro frontend shell |
 | `mage frontendCheck` | Run Biome, `astro check`, and Bun tests in `web/` |
 | `mage frontendBuild` | Build the staged Astro frontend |
+| `mage frontendSmoke` | Run the Astro browser smoke flow against the real Go backend |
 | `mage run` | Build and run once |
 | `mage generate` | Regenerate SQLC, Templ, and CSS output |
 | `mage fmt` | Format Go and Templ files and tidy modules |
 | `mage vet` | Run `go vet ./...` |
 | `mage test` | Run `go test ./...` |
-| `mage smoke` | Run the Docker-backed runtime smoke validation |
+| `mage smoke` | Run the Docker-backed legacy runtime smoke validation |
 | `mage lint` | Run `golangci-lint` |
 | `mage quality` | Run vet, test, lint, and `govulncheck` |
 | `mage ci` | Run the main local CI pipeline |
@@ -122,7 +129,7 @@ Generated Go artifacts and legacy built frontend assets are checked in for repro
 
 The staged Astro frontend under `web/` uses Bun and keeps its own lockfile. It is not part of `mage generate`.
 
-CI reruns `mage generate` and fails if tracked generated files or built assets drift.
+CI reruns `mage generate` and fails if tracked generated files or built assets drift. It also installs Bun dependencies, runs frontend check and build steps, runs mocked Playwright e2e coverage, and then validates both the Astro browser smoke flow and the legacy runtime smoke flow.
 
 ## What Requires Regeneration
 
@@ -145,11 +152,19 @@ go test ./...
 Useful repo-native follow-ups:
 
 ```bash
+mage frontendCheck
+mage frontendBuild
 mage lint
 npm run build-css
 ```
 
-When Docker is available, also run the runtime smoke check for real starter verification:
+When Bun and Playwright are available, run the Astro browser smoke check for real frontend verification:
+
+```bash
+./scripts/frontend-smoke.sh
+```
+
+When Docker is available, also run the legacy runtime smoke check for the shipped Go-rendered browser path:
 
 ```bash
 ./scripts/runtime-smoke.sh

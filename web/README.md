@@ -8,6 +8,7 @@ Current truth:
 - the Astro workspace now covers `/`, `/auth/login`, `/auth/register`, `/auth/logout`, `/profile`, and `/users`
 - those routes talk to the Go backend through the explicit `/api/auth/*` and `/api/users/*` contracts
 - local frontend development still talks to the Go app through a same-origin-style proxy prefix: `/_backend/*`
+- CI now runs Bun install, frontend check and build steps, mocked Playwright e2e coverage, and a real Astro browser smoke flow against the Go backend
 - the next migration target is retiring the legacy browser stack once the new CRUD path has enough verification
 
 ## Local development
@@ -36,6 +37,9 @@ mage frontendBuild
 mage frontendPreview
 mage frontendTest
 mage frontendE2E
+mage frontendSmoke
 ```
 
 The root Mage targets are the supported entrypoints for this workspace during the migration.
+
+`mage frontendSmoke` builds the Astro app, starts the Go backend against a disposable PostgreSQL instance when needed, and runs a real browser flow through Astro preview with Playwright.

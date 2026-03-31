@@ -12,7 +12,8 @@
     "lint:fix": "biome check --write .",
     "check": "bun run lint && astro check && bun run test",
     "test": "bun test ./src",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:smoke": "playwright test --config playwright.smoke.config.ts"
   },
   "dependencies": {
     "@astrojs/vue": "^6.0.1",

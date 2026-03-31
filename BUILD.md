@@ -157,7 +157,7 @@ Backend responsibilities after migration:
   - [x] Outcome: later work can point to a finite migration surface instead of reverse-engineering routes mid-build.
 
 - [x] **Phase 1 - Add the new frontend workspace**
-  - [x] `web/` contains Astro, Vue, TypeScript, Bun, Biome, Bun tests, and Playwright scaffolding.
+  - [x] `web/` contains Astro, Vue, TypeScript, Bun, Biome, Bun tests, mocked Playwright coverage, and a real browser smoke path.
   - [x] Local development can route frontend requests to the Go app through the `/_backend/*` proxy path.
   - [x] Root Mage wiring exists for Bun-based frontend install, dev, check, build, preview, unit-test, and e2e commands.
   - [x] The current Templ frontend still exists as the shipped browser path.
@@ -199,9 +199,10 @@ Backend responsibilities after migration:
   - [x] Repo docs now acknowledge the staged `web/` workspace and the migration inventory.
   - [ ] `README.md`, `docs/architecture.md`, `docs/development.md`, and `docs/api.md` describe Astro + Vue + Bun as the primary browser truth.
     - Current docs still say the shipped browser path is Templ + HTMX, which is accurate today but means this phase is not done.
-  - [ ] CI validates backend and frontend together.
-    - `.github/workflows/ci.yml` still runs Go-focused checks and the legacy runtime smoke flow, but no frontend install/check/build step.
-  - [ ] Smoke checks prove the new browser path actually works.
+  - [x] CI validates backend and frontend together.
+    - `.github/workflows/ci.yml` now installs Bun, runs frontend install/check/build, exercises mocked Playwright coverage, and keeps the Go quality gates in the same pipeline.
+  - [x] Smoke checks prove the new browser path actually works.
+    - `scripts/frontend-smoke.sh` now drives Astro preview plus the real Go backend through registration, profile, `/users`, and logout.
   - [ ] `BUILD.md` is deleted once the migration is complete.
 
 ## Recommended Execution Order From Here
@@ -237,7 +238,7 @@ Non-negotiables:
 - [x] Login, registration, logout, profile, and user CRUD work through the new frontend.
 - [x] Backend and frontend integration uses explicit documented contracts.
 - [x] PostgreSQL, Atlas, SQLC, sessions, and CSRF still form the backend foundation.
-- [ ] CI validates the combined backend + web shape.
+- [x] CI validates the combined backend + web shape.
 - [ ] Repo docs match the final migrated reality.
 - [ ] Legacy Templ + HTMX frontend machinery is gone.
 - [ ] `BUILD.md` can be removed because the migration is over.

@@ -11,7 +11,7 @@
 - CSRF protection, security headers, request IDs, rate limiting, and structured errors
 - Mage tasks for setup, generation, formatting, linting, testing, building, and release work
 - Atlas migrations plus a schema bootstrap path for fresh local bring-up
-- CI that regenerates derived files and verifies build, vet, test, lint, vulnerability checks, and a Docker-backed runtime smoke flow
+- CI that regenerates derived files and verifies frontend install, check, build, mocked Playwright e2e, Go build and test gates, an Astro browser smoke flow, and the legacy runtime smoke flow
 
 ## What You Do Not Get
 
@@ -56,7 +56,13 @@ mage dev
 
 Use `mage run` if you want a plain build-and-run without Air.
 
-5. Optional but recommended: run the Docker-backed runtime smoke check to prove the starter boots, registers a user, and reaches protected pages end to end:
+5. Optional but recommended: run the Astro browser smoke check to prove the new frontend path can register, load protected pages, and exercise the real Go backend end to end:
+
+```bash
+mage frontendSmoke
+```
+
+6. If you also want coverage for the current shipped legacy browser path, run the Docker-backed runtime smoke check:
 
 ```bash
 mage smoke
@@ -74,12 +80,13 @@ The app listens on [http://localhost:8080](http://localhost:8080). Open [http://
 | `mage frontendDev` | Run the staged Astro frontend on port `4321` |
 | `mage frontendCheck` | Run Biome, `astro check`, and Bun tests for `web/` |
 | `mage frontendBuild` | Build the staged Astro frontend |
+| `mage frontendSmoke` | Run the Astro browser smoke flow against the real Go backend |
 | `mage run` | Build and run the server once |
 | `mage generate` | Regenerate SQLC, Templ, and CSS output |
 | `mage fmt` | Format Go and Templ files and tidy modules |
 | `mage vet` | Run `go vet ./...` |
 | `mage test` | Run `go test ./...` |
-| `mage smoke` | Run the Docker-backed runtime smoke validation |
+| `mage smoke` | Run the Docker-backed legacy runtime smoke validation |
 | `mage lint` | Run `golangci-lint` |
 | `mage quality` | Run vet, test, lint, and `govulncheck` |
 | `mage ci` | Run the main local CI-style pipeline |
@@ -101,11 +108,19 @@ go test ./...
 Cheap repo-native checks that are worth running when relevant:
 
 ```bash
+mage frontendCheck
+mage frontendBuild
 mage lint
 npm run build-css
 ```
 
-For real starter bring-up confidence, run the runtime smoke check when Docker is available:
+For real browser-path bring-up confidence, run the Astro browser smoke check when Bun and Playwright are available:
+
+```bash
+./scripts/frontend-smoke.sh
+```
+
+If you still need coverage for the legacy shipped browser path, run the runtime smoke check when Docker is available:
 
 ```bash
 ./scripts/runtime-smoke.sh
@@ -133,7 +148,9 @@ For real starter bring-up confidence, run the runtime smoke check when Docker is
 - The app still keeps a startup bootstrap path in [`internal/store/store.go`](internal/store/store.go), but it now executes the canonical [`internal/store/schema.sql`](internal/store/schema.sql) before applying a small legacy reconciliation patch for older local databases.
 - Generated Go files and legacy built frontend assets are checked in. CI runs `mage generate` and fails if that changes tracked files.
 - `web/` is the staged Astro + Vue + Bun workspace for the frontend migration. Home plus the login, registration, logout, profile, and users flows now exist there, while the current shipped browser path is still the legacy Templ + HTMX app.
-- [`scripts/runtime-smoke.sh`](scripts/runtime-smoke.sh) is the current end-to-end starter validation path. It uses `DATABASE_URL` when provided or starts a local PostgreSQL container with Docker when it is not.
+- CI now installs Bun dependencies, runs frontend checks and builds, exercises the mocked Playwright suite, and then runs both the Astro browser smoke flow and the legacy runtime smoke flow.
+- [`scripts/frontend-smoke.sh`](scripts/frontend-smoke.sh) validates the Astro home, registration, profile, users create and edit, and logout flow against the real Go backend. It uses `DATABASE_URL` when provided or starts a local PostgreSQL container with Docker when it is not.
+- [`scripts/runtime-smoke.sh`](scripts/runtime-smoke.sh) remains the legacy end-to-end starter validation path for the shipped Go-rendered browser flow.
 - Leave `security.trusted_proxies` empty unless the app is actually behind reverse proxies you control.
 - `package-lock.json` is tracked so frontend dependency resolution stays reproducible across contributors and CI.
 
