@@ -24,8 +24,8 @@ This docs set stays close to the repo that exists today. Start with the developm
 - Top-level [`migrations/`](../migrations/) is the canonical Atlas migration directory.
 - [`internal/store/migrations/`](../internal/store/migrations/) is legacy history and should not be used as the source of truth.
 - Generated Go code and legacy built frontend assets are checked in. Run `mage generate` after source changes and commit the resulting artifacts.
-- `web/` is now the staged Astro + Vue + Bun workspace for the frontend migration, but the shipped browser path is still the legacy Templ + HTMX app.
-- CI reruns generation, fails if tracked generated files drift, runs frontend install, check, build, and mocked Playwright e2e coverage, then runs both the Astro browser smoke flow and the legacy runtime smoke check.
+- `web/` is now the Astro + Vue + Bun workspace for the frontend migration, and its committed `dist/` output is embedded into the Go binary for the primary GET browser routes.
+- CI reruns generation, fails if tracked generated files drift, runs frontend install, check, build, and mocked Playwright e2e coverage, then runs both the Astro browser smoke flow and the Go-served runtime smoke check.
 
 ## Naming Note
 

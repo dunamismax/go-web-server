@@ -98,6 +98,7 @@ func main() {
 	e := echo.New()
 	e.HideBanner = true
 	e.Debug = cfg.App.Debug
+	e.Pre(handler.FrontendBackendProxyRewrite(""))
 
 	ipExtractor, err := configureIPExtractor(cfg.Security.TrustedProxies)
 	if err != nil {

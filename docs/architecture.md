@@ -4,29 +4,31 @@
 
 ```text
 Browser
-  -> today: Echo routes + middleware + Templ/HTMX rendering
-  -> staged migration lane: Astro + Vue workspace in web/
+  -> Echo routes + middleware + embedded Astro dist for primary GET pages
+  -> temporary legacy mutation submits still return redirect or HTMX-oriented responses
   -> handlers
   -> store (SQLC)
   -> PostgreSQL
 ```
 
-The repo is a small monolith. There is one binary, one Postgres database, and one main demo domain model: users. The staged Astro + Vue + Bun workspace under `web/` now covers home plus the login, registration, logout, profile, and users flows, but the shipped browser path is still the legacy Templ + HTMX app.
+The repo is a small monolith. There is one binary, one Postgres database, and one main demo domain model: users. The Astro + Vue + Bun workspace under `web/` now owns the shipped GET browser path for home, auth, profile, and users through committed `web/dist` output that is embedded into the Go binary.
 
-Phase 2 added a parallel JSON API surface under `/api/*` for auth state and user CRUD contracts. Those contracts now back the staged Astro routes, while the legacy pages and HTMX fragments still exist beside that API surface until the frontend retirement phases are done.
+Phase 2 added a parallel JSON API surface under `/api/*` for auth state and user CRUD contracts. Those contracts now back both Astro development and the shipped embedded frontend. The remaining legacy browser surface is the old auth and `/users` mutation submit path plus the Templ rendering code that still supports it during the retirement phase.
 
 ## Request Flow
 
 1. Echo receives the request.
 2. Middleware applies recovery, security headers, request normalization, CSRF, request IDs, logging, rate limiting, and timeout handling.
 3. Session middleware loads the current user, if any.
-4. Handlers validate input, call the store, and render Templ views or JSON depending on the route surface.
+4. Handlers validate input, call the store, and return embedded Astro HTML, JSON, or temporary legacy Templ responses depending on the route surface.
 
 ## Route Split
 
-- Public legacy pages: home, demo, health, login, registration, static assets
+- Public embedded Astro pages: `/`, `/auth/login`, `/auth/register`, `/auth/logout`, and `/_astro/*` assets
+- Public backend utility routes: `/demo`, `/health`, and `/static/*`
 - Public JSON API: auth state, login, registration, logout
-- Protected legacy pages and fragments: profile, `/users` with inline form state, and the legacy CRUD submits
+- Protected embedded Astro pages: `/profile` and `/users`
+- Temporary legacy mutation routes: `POST /auth/*`, `POST /users`, `PUT /users/:id`, `PATCH /users/:id/deactivate`, and `DELETE /users/:id`
 - Protected JSON API: `/api/users`, `/api/users/count`, `/api/users/:id`, create, update, deactivate, and delete
 
 ## Configuration Flow
@@ -48,9 +50,9 @@ Environment variables win last.
 | [`internal/handler/`](../internal/handler/) | Route handlers and response helpers |
 | [`internal/middleware/`](../internal/middleware/) | Auth, CSRF, error, validation, and normalization middleware |
 | [`internal/store/`](../internal/store/) | Database pool setup, SQLC queries, schema, and store methods |
-| [`internal/view/`](../internal/view/) | Templ components and layouts for the current shipped browser path |
+| [`internal/view/`](../internal/view/) | Temporary Templ components and layouts that still back the legacy submit path |
 | [`internal/ui/static/`](../internal/ui/static/) | Embedded CSS, JS, images, and favicon for the legacy frontend |
-| [`web/`](../web/) | Staged Astro + Vue + Bun frontend workspace for the migration lane |
+| [`web/`](../web/) | Astro + Vue + Bun frontend workspace plus the committed shipped `dist/` output |
 | [`migrations/`](../migrations/) | Atlas-managed SQL migrations |
 | [`docs/`](./) | User-facing repo documentation |
 

@@ -2,11 +2,12 @@
 
 Base URL: `http://localhost:8080`
 
-This repo still ships a server-rendered Templ + HTMX browser path. Phase 2 adds a parallel JSON contract under `/api/*` so later Astro + Vue work can use stable backend contracts without reading handler or template code.
+This repo now ships an embedded Astro + Vue browser path for the primary GET routes. The frontend still talks to the Go backend through the documented `/api/*` contracts, and the remaining temporary legacy form submits still exist beside that API surface while the old Templ + HTMX path is retired.
 
 ## Contract rules
 
 - Session auth is same-origin cookie auth. The authenticated API routes use the same session as the legacy pages.
+- The shipped embedded frontend still calls `/_backend/*` so it can share the same request code used in Astro development. The Go server strips that prefix in-process before routing.
 - Safe requests (`GET`, `HEAD`, `OPTIONS`) expose the current CSRF token through the `X-CSRF-Token` response header.
 - State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) must send the CSRF token through the `X-CSRF-Token` header or a `csrf_token` form field.
 - The CSRF token rotates after every successful state-changing request. Frontend code should replace its cached token with the latest `X-CSRF-Token` response header.

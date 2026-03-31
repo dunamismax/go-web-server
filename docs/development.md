@@ -61,7 +61,7 @@ By default the Astro dev server listens on `http://127.0.0.1:4321` and proxies `
 mage frontendSmoke
 ```
 
-9. If you also want coverage for the current shipped legacy browser path, run the Docker-backed runtime smoke check:
+9. If you also want coverage for the current shipped Go-served browser path, run the Docker-backed runtime smoke check:
 
 ```bash
 mage smoke
@@ -99,7 +99,7 @@ See:
 | `mage fmt` | Format Go and Templ files and tidy modules |
 | `mage vet` | Run `go vet ./...` |
 | `mage test` | Run `go test ./...` |
-| `mage smoke` | Run the Docker-backed legacy runtime smoke validation |
+| `mage smoke` | Run the Docker-backed Go-served runtime smoke validation |
 | `mage lint` | Run `golangci-lint` |
 | `mage quality` | Run vet, test, lint, and `govulncheck` |
 | `mage ci` | Run the main local CI pipeline |
@@ -124,11 +124,11 @@ mage migrateStatus
 
 ## Generated Files and Assets
 
-Generated Go artifacts and legacy built frontend assets are checked in for reproducible builds and releases. After changing SQL, Templ views, or CSS source, run `mage generate` and commit the resulting updates.
+Generated Go artifacts, the shipped Astro dist in `web/dist`, and legacy built frontend assets are checked in for reproducible builds and releases. After changing SQL, Templ views, CSS source, or the shipped frontend pages/components, regenerate the relevant outputs and commit the resulting updates.
 
-The staged Astro frontend under `web/` uses Bun and keeps its own lockfile. The repo root now also tracks `bun.lock` for the legacy CSS asset build that still runs through `mage generate`.
+The Astro frontend under `web/` uses Bun and keeps its own lockfile. Its built `web/dist` output is now embedded into the Go binary for the shipped browser GET routes. The repo root also tracks `bun.lock` for the legacy CSS asset build that still runs through `mage generate`.
 
-CI reruns `mage generate` and fails if tracked generated files or built assets drift. It also installs Bun dependencies, runs frontend check and build steps, runs mocked Playwright e2e coverage, and then validates both the Astro browser smoke flow and the legacy runtime smoke flow.
+CI reruns `mage generate` and fails if tracked generated files or built assets drift. It also installs Bun dependencies, runs frontend check and build steps, runs mocked Playwright e2e coverage, and then validates both the Astro browser smoke flow and the Go-served runtime smoke flow.
 
 ## What Requires Regeneration
 
@@ -163,7 +163,7 @@ When Bun and Playwright are available, run the Astro browser smoke check for rea
 ./scripts/frontend-smoke.sh
 ```
 
-When Docker is available, also run the legacy runtime smoke check for the shipped Go-rendered browser path:
+When Docker is available, also run the runtime smoke check for the shipped Go-served embedded Astro browser path:
 
 ```bash
 ./scripts/runtime-smoke.sh

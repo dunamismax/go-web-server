@@ -102,7 +102,6 @@ yarn.lock
 /output/playwright/
 web/.astro/
 web/node_modules/
-web/dist/
 web/playwright-report/
 web/test-results/
 
@@ -143,3 +142,7 @@ target/
 .nuxt/
 .cache/
 public/build/
+
+# The shipped Astro build is committed and embedded into the Go binary.
+!web/dist/
+!web/dist/**

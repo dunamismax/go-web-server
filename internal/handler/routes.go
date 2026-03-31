@@ -9,6 +9,7 @@ import (
 	"github.com/dunamismax/go-web-server/internal/middleware"
 	"github.com/dunamismax/go-web-server/internal/store"
 	"github.com/dunamismax/go-web-server/internal/ui"
+	webdist "github.com/dunamismax/go-web-server/web"
 	"github.com/labstack/echo/v4"
 )
 
@@ -40,15 +41,26 @@ func RegisterRoutes(e *echo.Echo, handlers *Handlers) error {
 
 	e.GET("/static/*", echo.WrapHandler(http.StripPrefix("/static/", http.FileServer(http.FS(staticFS)))))
 
+	frontendFS, err := webdist.DistFS()
+	if err != nil {
+		slog.Error("failed to create frontend dist file system", "error", err)
+
+		return err
+	}
+
+	frontend := NewFrontendHandler(frontendFS)
+	e.GET("/_astro/*", frontend.Asset)
+
 	// Home routes
-	e.GET("/", handlers.Home.Home)
+	e.GET(RouteHome, frontend.Page("index.html"))
 	e.GET("/demo", handlers.Home.Demo)
 	e.GET("/health", handlers.Home.Health)
 
 	// Authentication routes (no auth required)
 	auth := e.Group("/auth")
-	auth.GET("/login", handlers.Auth.LoginPage)
-	auth.GET("/register", handlers.Auth.RegisterPage)
+	auth.GET("/login", frontend.Page("auth/login/index.html"))
+	auth.GET("/register", frontend.Page("auth/register/index.html"))
+	auth.GET("/logout", frontend.Page("auth/logout/index.html"))
 	auth.POST("/login", handlers.Auth.Login)
 	auth.POST("/register", handlers.Auth.Register)
 	auth.POST("/logout", handlers.Auth.Logout)
@@ -56,12 +68,11 @@ func RegisterRoutes(e *echo.Echo, handlers *Handlers) error {
 	requireAuth := handlers.Auth.authService.RequireAuth()
 
 	// Protected routes (authentication required)
-	profile := e.Group("/profile", requireAuth)
-	profile.GET("", handlers.Auth.Profile)
+	e.GET(RouteProfile, frontend.Page("profile/index.html"), requireAuth)
 
 	// User management routes
 	users := e.Group("/users", requireAuth)
-	users.GET("", handlers.User.Users)
+	users.GET("", frontend.Page("users/index.html"))
 	users.POST("", handlers.User.CreateUser)
 	users.PUT("/:id", handlers.User.UpdateUser)
 	users.PATCH("/:id/deactivate", handlers.User.DeactivateUser)

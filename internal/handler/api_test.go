@@ -585,3 +585,92 @@ func TestRegisterRoutesRetiresLegacyUserFormFragments(t *testing.T) {
 		t.Fatal("legacy /users/:id/edit route still registered")
 	}
 }
+
+func TestRegisterRoutesServeEmbeddedAstroPages(t *testing.T) {
+	t.Parallel()
+
+	e := echo.New()
+	handlers := &Handlers{
+		Home: &HomeHandler{},
+		User: &UserHandler{},
+		Auth: &AuthHandler{authService: &mockAuthService{}},
+	}
+
+	if err := RegisterRoutes(e, handlers); err != nil {
+		t.Fatalf("RegisterRoutes() error = %v", err)
+	}
+
+	testCases := []struct {
+		name   string
+		target string
+	}{
+		{name: "home", target: "/"},
+		{name: "login", target: "/auth/login"},
+		{name: "register", target: "/auth/register"},
+		{name: "logout", target: "/auth/logout"},
+		{name: "profile", target: "/profile"},
+		{name: "users", target: "/users"},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tc.target, nil)
+			rec := httptest.NewRecorder()
+
+			e.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Fatalf("GET %s status = %d, want %d", tc.target, rec.Code, http.StatusOK)
+			}
+
+			if got := rec.Header().Get(echo.HeaderContentType); !strings.HasPrefix(got, echo.MIMETextHTML) {
+				t.Fatalf("GET %s content-type = %q, want html", tc.target, got)
+			}
+
+			body := rec.Body.String()
+			if !strings.Contains(body, "/_astro/") {
+				t.Fatalf("GET %s body did not include embedded Astro assets: %q", tc.target, body)
+			}
+			if strings.Contains(body, "htmx.min.js") {
+				t.Fatalf("GET %s body still referenced legacy HTMX assets: %q", tc.target, body)
+			}
+		})
+	}
+}
+
+func TestFrontendBackendProxyRewriteStripsBakedPrefix(t *testing.T) {
+	t.Parallel()
+
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/_backend/api/auth/state?via=astro", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	var rewrittenPath string
+	var rewrittenRawPath string
+	var rewrittenQuery string
+	handler := FrontendBackendProxyRewrite("")(func(c echo.Context) error {
+		rewrittenPath = c.Request().URL.Path
+		rewrittenRawPath = c.Request().URL.RawPath
+		rewrittenQuery = c.Request().URL.RawQuery
+
+		return c.NoContent(http.StatusNoContent)
+	})
+
+	if err := handler(c); err != nil {
+		t.Fatalf("middleware error = %v", err)
+	}
+
+	if rewrittenPath != "/api/auth/state" {
+		t.Fatalf("rewritten path = %q, want %q", rewrittenPath, "/api/auth/state")
+	}
+
+	if rewrittenRawPath != "" {
+		t.Fatalf("rewritten raw path = %q, want empty", rewrittenRawPath)
+	}
+
+	if rewrittenQuery != "via=astro" {
+		t.Fatalf("rewritten query = %q, want %q", rewrittenQuery, "via=astro")
+	}
+}

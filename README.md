@@ -1,17 +1,17 @@
 # go-web-server
 
-`go-web-server` is a small Go starter for server-rendered apps with Echo, Templ, HTMX, PostgreSQL, SQLC, and Mage. The frontend migration now includes a staged `web/` workspace built with Astro, Vue, TypeScript, and Bun, with home, auth, profile, and user-management flows already ported there while the shipped browser path remains legacy. The goal is still boring, legible defaults: one binary, one Postgres database, session auth, and enough structure to ship without dragging in a giant framework.
+`go-web-server` is a small Go starter with an Echo backend, PostgreSQL, SQLC, Mage, and a shipped Astro + Vue browser path. Go still owns sessions, CSRF, and persistence; the primary GET browser routes now come from an embedded build committed under `web/dist`; and a temporary layer of legacy mutation submits still exists while the old Templ + HTMX code is retired. The goal is still boring, legible defaults: one binary, one Postgres database, session auth, and enough structure to ship without dragging in a giant framework.
 
 ## What You Get
 
 - Session-based login, registration, logout, and profile pages
 - A protected `/users` CRUD screen backed by PostgreSQL
-- Templ views with HTMX interactions and generated Tailwind CSS for the current shipped browser path
-- A staged Astro + Vue + Bun workspace under `web/` with home, login, registration, logout, profile, and users routes wired to the JSON auth and user-management contracts
+- An embedded Astro + Vue + Bun frontend for `/`, `/auth/login`, `/auth/register`, `/auth/logout`, `/profile`, and `/users`
+- Legacy auth and `/users` mutation submits kept temporarily while the old Templ + HTMX path is retired
 - CSRF protection, security headers, request IDs, rate limiting, and structured errors
 - Mage tasks for setup, generation, formatting, linting, testing, building, and release work
 - Atlas migrations plus a schema bootstrap path for fresh local bring-up
-- CI that regenerates derived files and verifies frontend install, check, build, mocked Playwright e2e, Go build and test gates, an Astro browser smoke flow, and the legacy runtime smoke flow
+- CI that regenerates derived files and verifies frontend install, check, build, mocked Playwright e2e, Go build and test gates, an Astro browser smoke flow, and a Go-served runtime smoke flow for the embedded frontend
 
 ## What You Do Not Get
 
@@ -62,7 +62,7 @@ Use `mage run` if you want a plain build-and-run without Air.
 mage frontendSmoke
 ```
 
-6. If you also want coverage for the current shipped legacy browser path, run the Docker-backed runtime smoke check:
+6. If you also want coverage for the shipped Go-served browser path, run the Docker-backed runtime smoke check:
 
 ```bash
 mage smoke
@@ -86,7 +86,7 @@ The app listens on [http://localhost:8080](http://localhost:8080). Open [http://
 | `mage fmt` | Format Go and Templ files and tidy modules |
 | `mage vet` | Run `go vet ./...` |
 | `mage test` | Run `go test ./...` |
-| `mage smoke` | Run the Docker-backed legacy runtime smoke validation |
+| `mage smoke` | Run the Docker-backed Go-served runtime smoke validation |
 | `mage lint` | Run `golangci-lint` |
 | `mage quality` | Run vet, test, lint, and `govulncheck` |
 | `mage ci` | Run the main local CI-style pipeline |
@@ -120,7 +120,7 @@ For real browser-path bring-up confidence, run the Astro browser smoke check whe
 ./scripts/frontend-smoke.sh
 ```
 
-If you still need coverage for the legacy shipped browser path, run the runtime smoke check when Docker is available:
+If you want coverage for the shipped Go-served browser path, run the runtime smoke check when Docker is available:
 
 ```bash
 ./scripts/runtime-smoke.sh
@@ -147,10 +147,11 @@ If you still need coverage for the legacy shipped browser path, run the runtime 
 - [`internal/store/schema.sql`](internal/store/schema.sql) is the schema source used for SQLC and Atlas.
 - The app still keeps a startup bootstrap path in [`internal/store/store.go`](internal/store/store.go), but it now executes the canonical [`internal/store/schema.sql`](internal/store/schema.sql) before applying a small legacy reconciliation patch for older local databases.
 - Generated Go files and legacy built frontend assets are checked in. CI runs `mage generate` and fails if that changes tracked files.
-- `web/` is the staged Astro + Vue + Bun workspace for the frontend migration. Home plus the login, registration, logout, profile, and users flows now exist there, while the current shipped browser path is still the legacy Templ + HTMX app. The legacy `/users` page now owns its inline create and edit form state and renders its current count and list inline instead of bootstrapping through `/users/list`, `/users/count`, `/users/form`, or `/users/:id/edit`.
-- CI now installs Bun dependencies, runs frontend checks and builds, exercises the mocked Playwright suite, and then runs both the Astro browser smoke flow and the legacy runtime smoke flow.
+- `web/` is the Astro + Vue + Bun frontend workspace. Its built `web/dist` output is committed and embedded into the Go binary for the primary GET browser routes, while the legacy auth and `/users` mutation submits still exist temporarily.
+- The embedded Astro build still talks to `/_backend/*`; the Go server strips that prefix in-process for shipped builds, while Astro dev keeps using it as a real proxy prefix.
+- CI now installs Bun dependencies, runs frontend checks and builds, exercises the mocked Playwright suite, and then runs both the Astro browser smoke flow and the Go-served runtime smoke flow.
 - [`scripts/frontend-smoke.sh`](scripts/frontend-smoke.sh) validates the Astro home, registration, profile, users create and edit, and logout flow against the real Go backend. It uses `DATABASE_URL` when provided or starts a local PostgreSQL container with Docker when it is not.
-- [`scripts/runtime-smoke.sh`](scripts/runtime-smoke.sh) remains the legacy end-to-end starter validation path for the shipped Go-rendered browser flow.
+- [`scripts/runtime-smoke.sh`](scripts/runtime-smoke.sh) now validates the shipped Go-served embedded Astro shell, the same-origin `/_backend/*` bridge it uses at runtime, and the temporary legacy submit path used during the transition.
 - Leave `security.trusted_proxies` empty unless the app is actually behind reverse proxies you control.
 - Root `bun.lock` is tracked so the legacy CSS asset build stays reproducible across contributors and CI.
 

@@ -124,6 +124,18 @@ curl -fsS \
   -c "${COOKIE_JAR}" \
   "${BASE_URL}/auth/register" >/dev/null
 
+if ! grep -q '/_astro/' "${WORK_DIR}/register.html"; then
+  echo "register page did not include embedded Astro assets" >&2
+  cat "${WORK_DIR}/register.html" >&2 || true
+  exit 1
+fi
+
+if grep -q 'htmx.min.js' "${WORK_DIR}/register.html"; then
+  echo "register page still referenced legacy HTMX assets" >&2
+  cat "${WORK_DIR}/register.html" >&2 || true
+  exit 1
+fi
+
 CSRF_TOKEN="$(extract_csrf_token "${WORK_DIR}/register.headers")"
 if [[ -z "${CSRF_TOKEN}" ]]; then
   echo "failed to capture CSRF token from register page" >&2
@@ -161,8 +173,8 @@ if [[ "${profile_status}" != "200" ]]; then
   exit 1
 fi
 
-if ! grep -q "${REGISTER_EMAIL}" "${WORK_DIR}/profile.html"; then
-  echo "profile page did not include registered email ${REGISTER_EMAIL}" >&2
+if ! grep -q '/_astro/' "${WORK_DIR}/profile.html"; then
+  echo "profile page did not include embedded Astro assets" >&2
   cat "${WORK_DIR}/profile.html" >&2 || true
   exit 1
 fi
@@ -175,34 +187,50 @@ if [[ "${users_status}" != "200" ]]; then
   exit 1
 fi
 
-if ! grep -q "${REGISTER_EMAIL}" "${WORK_DIR}/users.html"; then
-  echo "users page did not include registered email ${REGISTER_EMAIL}" >&2
+if ! grep -q '/_astro/' "${WORK_DIR}/users.html"; then
+  echo "users page did not include embedded Astro assets" >&2
   cat "${WORK_DIR}/users.html" >&2 || true
   exit 1
 fi
 
-if grep -q '/users/list' "${WORK_DIR}/users.html"; then
-  echo "users page still referenced retired /users/list fragment" >&2
+if grep -q 'htmx.min.js' "${WORK_DIR}/users.html"; then
+  echo "users page still referenced legacy HTMX assets" >&2
   cat "${WORK_DIR}/users.html" >&2 || true
   exit 1
 fi
 
-if grep -q '/users/count' "${WORK_DIR}/users.html"; then
-  echo "users page still referenced retired /users/count fragment" >&2
-  cat "${WORK_DIR}/users.html" >&2 || true
+auth_state_status="$(curl -sS -o "${WORK_DIR}/auth-state.json" -w '%{http_code}' -b "${COOKIE_JAR}" "${BASE_URL}/_backend/api/auth/state")"
+if [[ "${auth_state_status}" != "200" ]]; then
+  echo "auth state request through /_backend failed with status ${auth_state_status}" >&2
+  cat "${WORK_DIR}/auth-state.json" >&2 || true
+  cat "${APP_LOG}" >&2 || true
   exit 1
 fi
 
-if grep -q '/users/form' "${WORK_DIR}/users.html"; then
-  echo "users page still referenced retired /users/form fragment" >&2
-  cat "${WORK_DIR}/users.html" >&2 || true
+if ! grep -q '"authenticated":true' "${WORK_DIR}/auth-state.json"; then
+  echo "auth state response did not report an authenticated session" >&2
+  cat "${WORK_DIR}/auth-state.json" >&2 || true
   exit 1
 fi
 
-if grep -Eq '/users/[0-9]+/edit' "${WORK_DIR}/users.html"; then
-  echo "users page still referenced retired /users/:id/edit fragment" >&2
-  cat "${WORK_DIR}/users.html" >&2 || true
+if ! grep -q "${REGISTER_EMAIL}" "${WORK_DIR}/auth-state.json"; then
+  echo "auth state response did not include registered email ${REGISTER_EMAIL}" >&2
+  cat "${WORK_DIR}/auth-state.json" >&2 || true
   exit 1
 fi
 
-echo "runtime smoke passed: registration, session auth, protected pages, inline legacy users screen, and database-backed health all succeeded"
+users_api_status="$(curl -sS -o "${WORK_DIR}/users.json" -w '%{http_code}' -b "${COOKIE_JAR}" "${BASE_URL}/_backend/api/users")"
+if [[ "${users_api_status}" != "200" ]]; then
+  echo "users API request through /_backend failed with status ${users_api_status}" >&2
+  cat "${WORK_DIR}/users.json" >&2 || true
+  cat "${APP_LOG}" >&2 || true
+  exit 1
+fi
+
+if ! grep -q "${REGISTER_EMAIL}" "${WORK_DIR}/users.json"; then
+  echo "users API response did not include registered email ${REGISTER_EMAIL}" >&2
+  cat "${WORK_DIR}/users.json" >&2 || true
+  exit 1
+fi
+
+echo "runtime smoke passed: registration, embedded Astro pages, same-origin /_backend API bridge, protected JSON contracts, and database-backed health all succeeded"
