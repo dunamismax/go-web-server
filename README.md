@@ -129,6 +129,7 @@ If you want coverage for the shipped Go-served browser path, run the runtime smo
 
 ## Documentation
 
+- [BUILD.md](BUILD.md) for the active phased execution plan while this starter is still being shaped
 - [Docs index](docs/README.md)
 - [Development guide](docs/development.md)
 - [API and route behavior](docs/api.md)
