@@ -345,6 +345,68 @@ ul {
   font-weight: 700;
 }
 
+.dashboard-grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+  align-items: start;
+}
+
+.stat-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.label {
+  color: #94a3b8;
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.35rem;
+  text-transform: uppercase;
+}
+
+.user-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.user-card h3,
+.empty-state h3 {
+  font-size: 1.1rem;
+}
+
+.compact-detail-list {
+  gap: 0.65rem;
+}
+
+.compact-detail-list .detail-row {
+  gap: 0.15rem;
+  padding-bottom: 0.65rem;
+}
+
+.inline-link {
+  color: #93c5fd;
+  text-decoration: underline;
+}
+
+.button.destructive {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  color: #fecaca;
+}
+
+.button.destructive:hover {
+  filter: none;
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.empty-state {
+  text-align: center;
+}
+
 @media (max-width: 720px) {
   .site-shell,
   .page-shell {
@@ -358,7 +420,8 @@ ul {
     flex-direction: column;
   }
 
-  .two-column-grid {
+  .two-column-grid,
+  .dashboard-grid {
     grid-template-columns: 1fr;
   }
 }

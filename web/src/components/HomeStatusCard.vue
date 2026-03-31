@@ -121,21 +121,21 @@ onMounted(() => {
 
     <article class="card stack-md">
       <p class="eyebrow">What moved already</p>
-      <h2>Astro + Vue auth coverage</h2>
+      <h2>Astro + Vue auth and CRUD coverage</h2>
       <ul>
-        <li>Home, login, registration, logout, and profile pages now exist in <code>web/</code></li>
-        <li>Auth flows talk to <code>/api/auth/*</code> instead of HTMX redirects</li>
-        <li>Protected pages can redirect unauthenticated users back to the Astro login route</li>
+        <li>Home, login, registration, logout, profile, and users pages now exist in <code>web/</code></li>
+        <li>Auth and managed-user flows talk to <code>/api/auth/*</code> and <code>/api/users/*</code></li>
+        <li>Protected Astro routes can redirect unauthenticated users back to the login flow</li>
       </ul>
     </article>
 
     <article class="card stack-md">
       <p class="eyebrow">Still ahead</p>
-      <h2>Phase 4 target</h2>
+      <h2>Phase 5 target</h2>
       <ul>
-        <li>Port the <code>/users</code> CRUD screen to Astro + Vue</li>
-        <li>Replace HTMX fragments with the documented JSON contracts</li>
-        <li>Retire the legacy browser path only after the new CRUD surface reaches parity</li>
+        <li>Retire the Templ-only browser views once the Astro CRUD path has enough verification</li>
+        <li>Remove HTMX from normal shipped browser behavior</li>
+        <li>Collapse the active frontend toolchain around Bun instead of the legacy npm CSS path</li>
       </ul>
     </article>
   </section>

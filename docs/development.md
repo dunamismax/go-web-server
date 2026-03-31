@@ -54,7 +54,7 @@ mage frontendInstall
 mage frontendDev
 ```
 
-By default the Astro dev server listens on `http://127.0.0.1:4321` and proxies `/_backend/*` to the Go app on `http://127.0.0.1:8080`. The staged frontend now includes home plus the login, registration, logout, and profile flows.
+By default the Astro dev server listens on `http://127.0.0.1:4321` and proxies `/_backend/*` to the Go app on `http://127.0.0.1:8080`. The staged frontend now includes home plus the login, registration, logout, profile, and users flows.
 
 8. Optional but recommended: prove the starter flow end to end with the Docker-backed runtime smoke check:
 

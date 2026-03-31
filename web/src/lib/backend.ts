@@ -50,6 +50,50 @@ export interface RegisterPayload {
   avatar_url?: string;
 }
 
+export interface ManagedUser {
+  id: number;
+  email: string;
+  name: string;
+  avatar_url: string | null;
+  bio: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ManagedUserPayload {
+  email: string;
+  name: string;
+  password?: string;
+  confirm_password?: string;
+  bio?: string;
+  avatar_url?: string;
+}
+
+export interface UserListResponse {
+  users: ManagedUser[];
+  count: number;
+}
+
+export interface UserResponse {
+  user: ManagedUser;
+}
+
+export interface UserMutationResponse {
+  message: string;
+  user: ManagedUser;
+}
+
+export interface UserCountResponse {
+  count: number;
+}
+
+export interface DeleteUserResponse {
+  id: number;
+  deleted: boolean;
+  message: string;
+}
+
 export interface ValidationErrorDetail {
   field?: string;
   message?: string;
@@ -221,6 +265,19 @@ function cleanOptionalString(value?: string): string | undefined {
   return trimmed === '' ? undefined : trimmed;
 }
 
+function buildManagedUserPayload(
+  payload: ManagedUserPayload,
+): ManagedUserPayload {
+  return {
+    email: payload.email.trim(),
+    name: payload.name.trim(),
+    password: payload.password,
+    confirm_password: payload.confirm_password,
+    bio: cleanOptionalString(payload.bio),
+    avatar_url: cleanOptionalString(payload.avatar_url),
+  };
+}
+
 export async function fetchHealth(
   fetcher: typeof fetch = fetch,
   base = configuredBackendBase(),
@@ -284,6 +341,80 @@ export async function register(
         bio: cleanOptionalString(payload.bio),
         avatar_url: cleanOptionalString(payload.avatar_url),
       }),
+    },
+    base,
+  );
+}
+
+export async function fetchUsers(
+  base = configuredBackendBase(),
+): Promise<UserListResponse> {
+  return requestJSON<UserListResponse>('/api/users', undefined, base);
+}
+
+export async function fetchUser(
+  id: number,
+  base = configuredBackendBase(),
+): Promise<UserResponse> {
+  return requestJSON<UserResponse>(`/api/users/${id}`, undefined, base);
+}
+
+export async function fetchUserCount(
+  base = configuredBackendBase(),
+): Promise<UserCountResponse> {
+  return requestJSON<UserCountResponse>('/api/users/count', undefined, base);
+}
+
+export async function createUser(
+  payload: ManagedUserPayload,
+  base = configuredBackendBase(),
+): Promise<UserMutationResponse> {
+  return requestJSON<UserMutationResponse>(
+    '/api/users',
+    {
+      method: 'POST',
+      body: JSON.stringify(buildManagedUserPayload(payload)),
+    },
+    base,
+  );
+}
+
+export async function updateUser(
+  id: number,
+  payload: ManagedUserPayload,
+  base = configuredBackendBase(),
+): Promise<UserMutationResponse> {
+  return requestJSON<UserMutationResponse>(
+    `/api/users/${id}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(buildManagedUserPayload(payload)),
+    },
+    base,
+  );
+}
+
+export async function deactivateUser(
+  id: number,
+  base = configuredBackendBase(),
+): Promise<UserMutationResponse> {
+  return requestJSON<UserMutationResponse>(
+    `/api/users/${id}/deactivate`,
+    {
+      method: 'PATCH',
+    },
+    base,
+  );
+}
+
+export async function deleteUser(
+  id: number,
+  base = configuredBackendBase(),
+): Promise<DeleteUserResponse> {
+  return requestJSON<DeleteUserResponse>(
+    `/api/users/${id}`,
+    {
+      method: 'DELETE',
     },
     base,
   );

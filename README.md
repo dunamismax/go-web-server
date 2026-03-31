@@ -1,13 +1,13 @@
 # go-web-server
 
-`go-web-server` is a small Go starter for server-rendered apps with Echo, Templ, HTMX, PostgreSQL, SQLC, and Mage. The frontend migration now includes a staged `web/` workspace built with Astro, Vue, TypeScript, and Bun, with home and auth/profile flows already ported there while the shipped browser path remains legacy. The goal is still boring, legible defaults: one binary, one Postgres database, session auth, and enough structure to ship without dragging in a giant framework.
+`go-web-server` is a small Go starter for server-rendered apps with Echo, Templ, HTMX, PostgreSQL, SQLC, and Mage. The frontend migration now includes a staged `web/` workspace built with Astro, Vue, TypeScript, and Bun, with home, auth, profile, and user-management flows already ported there while the shipped browser path remains legacy. The goal is still boring, legible defaults: one binary, one Postgres database, session auth, and enough structure to ship without dragging in a giant framework.
 
 ## What You Get
 
 - Session-based login, registration, logout, and profile pages
 - A protected `/users` CRUD screen backed by PostgreSQL
 - Templ views with HTMX interactions and generated Tailwind CSS for the current shipped browser path
-- A staged Astro + Vue + Bun workspace under `web/` with home, login, registration, logout, and profile routes wired to the JSON auth contracts
+- A staged Astro + Vue + Bun workspace under `web/` with home, login, registration, logout, profile, and users routes wired to the JSON auth and user-management contracts
 - CSRF protection, security headers, request IDs, rate limiting, and structured errors
 - Mage tasks for setup, generation, formatting, linting, testing, building, and release work
 - Atlas migrations plus a schema bootstrap path for fresh local bring-up
@@ -132,7 +132,7 @@ For real starter bring-up confidence, run the runtime smoke check when Docker is
 - [`internal/store/schema.sql`](internal/store/schema.sql) is the schema source used for SQLC and Atlas.
 - The app still keeps a startup bootstrap path in [`internal/store/store.go`](internal/store/store.go), but it now executes the canonical [`internal/store/schema.sql`](internal/store/schema.sql) before applying a small legacy reconciliation patch for older local databases.
 - Generated Go files and legacy built frontend assets are checked in. CI runs `mage generate` and fails if that changes tracked files.
-- `web/` is the staged Astro + Vue + Bun workspace for the frontend migration. Home plus the login, registration, logout, and profile flows now exist there, while the current shipped browser path is still the legacy Templ + HTMX app.
+- `web/` is the staged Astro + Vue + Bun workspace for the frontend migration. Home plus the login, registration, logout, profile, and users flows now exist there, while the current shipped browser path is still the legacy Templ + HTMX app.
 - [`scripts/runtime-smoke.sh`](scripts/runtime-smoke.sh) is the current end-to-end starter validation path. It uses `DATABASE_URL` when provided or starts a local PostgreSQL container with Docker when it is not.
 - Leave `security.trusted_proxies` empty unless the app is actually behind reverse proxies you control.
 - `package-lock.json` is tracked so frontend dependency resolution stays reproducible across contributors and CI.

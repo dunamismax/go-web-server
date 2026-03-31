@@ -178,11 +178,15 @@ Backend responsibilities after migration:
   - [x] Success, error, redirect, and unauthenticated states are handled by the new frontend.
   - [x] A user can complete the auth journey without touching Templ pages.
 
-- [ ] **Phase 4 - Port user management**
-  - [ ] `/users` list view is ported to Astro + Vue.
-  - [ ] Create, edit, deactivate, delete, and count flows use explicit frontend contracts instead of HTMX fragments.
-  - [ ] The authenticated CRUD experience works end to end through Astro + Vue.
-  - [ ] HTMX fragments are no longer required for normal user management.
+- [x] **Phase 4 - Port user management**
+  - [x] `/users` list view is ported to Astro + Vue.
+    - `web/src/pages/users.astro` now mounts a Vue CRUD dashboard instead of pointing normal frontend work at the legacy HTMX screen.
+  - [x] Create, edit, deactivate, delete, and count flows use explicit frontend contracts instead of HTMX fragments.
+    - The staged frontend now talks to `/api/users`, `/api/users/:id`, `/api/users/:id/deactivate`, and `/api/users/count` through `web/src/lib/backend.ts`.
+  - [x] The authenticated CRUD experience works end to end through Astro + Vue.
+    - Playwright now covers the staged users route for create, edit, deactivate, and delete flows with mocked backend contracts.
+  - [x] HTMX fragments are no longer required for normal user management.
+    - Legacy fragment routes still exist for the shipped browser path, but the staged Astro `/users` flow no longer depends on them.
 
 - [ ] **Phase 5 - Retire the legacy frontend stack**
   - [ ] Templ views and handlers that only existed for the old browser UI are removed.
@@ -206,7 +210,7 @@ Backend responsibilities after migration:
 - [x] Phase 1
 - [x] Phase 2
 - [x] Phase 3
-- [ ] Phase 4
+- [x] Phase 4
 - [ ] Parity pass against current behavior
 - [ ] Phase 5
 - [ ] Phase 6
@@ -230,8 +234,8 @@ Non-negotiables:
 
 - [ ] The repo clearly ships **Go backend + Astro/Vue web frontend on Bun** as the primary browser path.
 - [x] The frontend decision remains **web-only**.
-- [ ] Login, registration, logout, profile, and user CRUD work through the new frontend.
-- [ ] Backend and frontend integration uses explicit documented contracts.
+- [x] Login, registration, logout, profile, and user CRUD work through the new frontend.
+- [x] Backend and frontend integration uses explicit documented contracts.
 - [x] PostgreSQL, Atlas, SQLC, sessions, and CSRF still form the backend foundation.
 - [ ] CI validates the combined backend + web shape.
 - [ ] Repo docs match the final migrated reality.

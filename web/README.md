@@ -5,10 +5,10 @@ This directory is the staged Astro + Vue + Bun workspace for the `go-web-server`
 Current truth:
 
 - the shipped browser path is still the legacy Templ + HTMX app
-- the Astro workspace now covers `/`, `/auth/login`, `/auth/register`, `/auth/logout`, and `/profile`
-- those routes talk to the Go backend through the explicit `/api/auth/*` contracts
+- the Astro workspace now covers `/`, `/auth/login`, `/auth/register`, `/auth/logout`, `/profile`, and `/users`
+- those routes talk to the Go backend through the explicit `/api/auth/*` and `/api/users/*` contracts
 - local frontend development still talks to the Go app through a same-origin-style proxy prefix: `/_backend/*`
-- the next migration target is the protected `/users` CRUD surface
+- the next migration target is retiring the legacy browser stack once the new CRUD path has enough verification
 
 ## Local development
 

@@ -12,14 +12,15 @@ It exists so the migration can move route by route without pretending the legacy
 - **Local frontend proxy prefix:** `/_backend/*`
 - **Phase 2 result:** explicit JSON contracts now exist under `/api/*` for auth state and managed-user CRUD
 - **Phase 3 result:** the staged Astro workspace now covers home, login, registration, logout, and profile flows
-- **Next required phase after this doc:** port the protected `/users` CRUD surface onto Astro + Vue
+- **Phase 4 result:** the staged Astro workspace now also covers the protected `/users` CRUD surface through the JSON contracts
+- **Next required phase after this doc:** retire the legacy browser stack only after the Astro CRUD path has enough verification
 
 ## Route inventory
 
 | Route | Auth | Current mode | Notes for migration |
 | --- | --- | --- | --- |
 | `GET /` | public | page or HTMX fragment | Astro parity now exists in `web/`; Go still ships the legacy page for the primary browser path |
-| `GET /demo` | public | JSON or HTMX fragment | Still useful as a backend connectivity check while `/users` is being ported |
+| `GET /demo` | public | JSON or HTMX fragment | Still useful as a backend connectivity check while the legacy browser path still exists |
 | `GET /health` | public | JSON or HTMX fragment | The Astro home page reads this through the local proxy |
 | `GET /auth/login` | public | page or HTMX fragment | Astro parity now exists in `web/` against `/api/auth/login` |
 | `GET /auth/register` | public | page or HTMX fragment | Astro parity now exists in `web/` against `/api/auth/register` |
@@ -27,15 +28,15 @@ It exists so the migration can move route by route without pretending the legacy
 | `POST /auth/register` | public | redirect or HTMX redirect payload | Legacy submit stays until the primary browser path flips |
 | `POST /auth/logout` | protected session in practice | redirect or HTMX redirect payload | Legacy submit stays until the primary browser path flips |
 | `GET /profile` | protected | page or HTMX fragment | Astro parity now exists in `web/` with client-side unauthenticated redirect handling |
-| `GET /users` | protected | page or HTMX fragment | Next Astro page shell target |
-| `GET /users/list` | protected | HTMX fragment | Legacy fragment surface, not a durable frontend contract |
-| `GET /users/count` | protected | HTMX fragment | Legacy count fragment kept for the current `/users` page |
-| `GET /users/form` | protected | HTMX fragment | Legacy fragment surface, not a durable frontend contract |
-| `GET /users/:id/edit` | protected | HTMX fragment | Legacy fragment surface, not a durable frontend contract |
-| `POST /users` | protected | HTMX fragment | Legacy submit kept in place until the Astro port is done |
-| `PUT /users/:id` | protected | HTMX fragment | Legacy submit kept in place until the Astro port is done |
-| `PATCH /users/:id/deactivate` | protected | HTMX fragment | Legacy submit kept in place until the Astro port is done |
-| `DELETE /users/:id` | protected | empty `200 OK` | Legacy delete submit kept in place until the Astro port is done |
+| `GET /users` | protected | page or HTMX fragment | Astro parity now exists in `web/` against the `/api/users/*` contracts |
+| `GET /users/list` | protected | HTMX fragment | Legacy fragment surface, no longer needed by the staged Astro CRUD path |
+| `GET /users/count` | protected | HTMX fragment | Legacy count fragment kept for the old screen; Astro now uses `/api/users/count` |
+| `GET /users/form` | protected | HTMX fragment | Legacy fragment surface, no longer needed by the staged Astro CRUD path |
+| `GET /users/:id/edit` | protected | HTMX fragment | Legacy fragment surface, no longer needed by the staged Astro CRUD path |
+| `POST /users` | protected | HTMX fragment | Legacy submit kept in place until the legacy browser path is retired |
+| `PUT /users/:id` | protected | HTMX fragment | Legacy submit kept in place until the legacy browser path is retired |
+| `PATCH /users/:id/deactivate` | protected | HTMX fragment | Legacy submit kept in place until the legacy browser path is retired |
+| `DELETE /users/:id` | protected | empty `200 OK` | Legacy delete submit kept in place until the legacy browser path is retired |
 | `GET /api/auth/state` | public | JSON | Frontend bootstrap contract for session and CSRF state |
 | `POST /api/auth/login` | public | JSON | Explicit login contract for later Astro auth flows |
 | `POST /api/auth/register` | public | JSON | Explicit registration contract for later Astro auth flows |

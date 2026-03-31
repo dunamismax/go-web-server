@@ -11,9 +11,9 @@ Browser
   -> PostgreSQL
 ```
 
-The repo is a small monolith. There is one binary, one Postgres database, and one main demo domain model: users. The staged Astro + Vue + Bun workspace under `web/` now covers home plus the login, registration, logout, and profile flows, but the shipped browser path is still the legacy Templ + HTMX app.
+The repo is a small monolith. There is one binary, one Postgres database, and one main demo domain model: users. The staged Astro + Vue + Bun workspace under `web/` now covers home plus the login, registration, logout, profile, and users flows, but the shipped browser path is still the legacy Templ + HTMX app.
 
-Phase 2 added a parallel JSON API surface under `/api/*` for auth state and user CRUD contracts. Those auth contracts now back the staged Astro routes, while the legacy pages and HTMX fragments still exist beside that API surface until the remaining frontend porting phases are done.
+Phase 2 added a parallel JSON API surface under `/api/*` for auth state and user CRUD contracts. Those contracts now back the staged Astro routes, while the legacy pages and HTMX fragments still exist beside that API surface until the frontend retirement phases are done.
 
 ## Request Flow
 

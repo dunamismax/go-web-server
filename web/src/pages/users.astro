@@ -1,0 +1,17 @@
+---
+import UsersDashboard from '../components/UsersDashboard.vue';
+import AppLayout from '../layouts/AppLayout.astro';
+---
+
+<AppLayout title="Users | go-web-server">
+  <section class="page-intro stack-md narrow">
+    <p class="eyebrow">Protected Astro route</p>
+    <h1>Manage users</h1>
+    <p class="lead compact-lead">
+      The legacy HTMX CRUD screen now has an Astro + Vue counterpart that talks directly to the
+      documented <code>/api/users/*</code> contracts.
+    </p>
+  </section>
+
+  <UsersDashboard client:load />
+</AppLayout>
