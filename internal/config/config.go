@@ -1,313 +1,186 @@
-// Package config provides application configuration management using koanf.
+// Package config loads the application's settings from environment
+// variables. There is no config file: one source keeps deployments easy to
+// reason about, and every variable is listed in .env.example.
 package config
 
 import (
-	"bufio"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net"
+	"net/netip"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/knadh/koanf/parsers/yaml"
-	"github.com/knadh/koanf/providers/confmap"
-	"github.com/knadh/koanf/providers/env"
-	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/v2"
+	"github.com/caarlos0/env/v11"
 )
 
-// Config holds all application configuration settings.
+// The values APP_ENV accepts.
+const (
+	EnvDevelopment = "development"
+	EnvProduction  = "production"
+)
+
+// Config is the application's complete configuration.
 type Config struct {
-	// Server configuration
-	Server struct {
-		Port            string        `mapstructure:"port"`
-		Host            string        `mapstructure:"host"`
-		ReadTimeout     time.Duration `mapstructure:"read_timeout"`
-		WriteTimeout    time.Duration `mapstructure:"write_timeout"`
-		ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
-	} `mapstructure:"server"`
+	// Env selects development conveniences or production hardening.
+	Env string `env:"APP_ENV" envDefault:"development"`
 
-	// Database configuration
-	Database struct {
-		URL             string        `mapstructure:"url"`
-		MaxConnections  int32         `mapstructure:"max_connections"`
-		MinConnections  int32         `mapstructure:"min_connections"`
-		Timeout         time.Duration `mapstructure:"timeout"`
-		MaxConnLifetime time.Duration `mapstructure:"max_conn_lifetime"`
-		MaxConnIdleTime time.Duration `mapstructure:"max_conn_idle_time"`
-		RunMigrations   bool          `mapstructure:"run_migrations"`
-		SSLMode         string        `mapstructure:"ssl_mode"`
-	} `mapstructure:"database"`
+	// HTTPAddr is the listen address. When it is unset and PORT is set (as
+	// most container platforms do), the server listens on ":$PORT".
+	HTTPAddr string `env:"HTTP_ADDR"`
+	Port     string `env:"PORT"`
 
-	// Application configuration
-	App struct {
-		Environment string `mapstructure:"environment"`
-		Debug       bool   `mapstructure:"debug"`
-		LogLevel    string `mapstructure:"log_level"`
-		LogFormat   string `mapstructure:"log_format"`
-	} `mapstructure:"app"`
+	DatabaseURL      string `env:"DATABASE_URL,required,notEmpty"`
+	DatabaseMaxConns int32  `env:"DATABASE_MAX_CONNS" envDefault:"10"`
+	// AutoMigrate applies pending migrations at startup. Turn it off when a
+	// separate, more privileged role runs "server migrate up" during deploys.
+	AutoMigrate bool `env:"DATABASE_AUTO_MIGRATE" envDefault:"true"`
 
-	// Security configuration
-	Security struct {
-		TrustedProxies []string `mapstructure:"trusted_proxies"`
-		EnableCORS     bool     `mapstructure:"enable_cors"`
-		AllowedOrigins []string `mapstructure:"allowed_origins"`
-	} `mapstructure:"security"`
+	LogLevel slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	// LogFormat is "text" or "json". Unset means text in development and
+	// JSON in production.
+	LogFormat string `env:"LOG_FORMAT"`
 
-	// Feature flags
-	Features struct {
-		EnableMetrics bool `mapstructure:"enable_metrics"`
-		EnablePprof   bool `mapstructure:"enable_pprof"`
-	} `mapstructure:"features"`
+	SessionLifetime time.Duration `env:"SESSION_LIFETIME" envDefault:"168h"`
+	// SessionCookieSecure marks the session cookie HTTPS-only. Unset means
+	// true in production and false in development.
+	SessionCookieSecure *bool `env:"SESSION_COOKIE_SECURE"`
 
-	// JWT/Authentication configuration
-	Auth struct {
-		JWTSecret       string        `mapstructure:"jwt_secret"`
-		TokenDuration   time.Duration `mapstructure:"token_duration"`
-		RefreshDuration time.Duration `mapstructure:"refresh_duration"`
-		CookieName      string        `mapstructure:"cookie_name"`
-		CookieSecure    bool          `mapstructure:"cookie_secure"`
-	} `mapstructure:"auth"`
+	// TrustedProxies lists the IPs or CIDR ranges of reverse proxies whose
+	// X-Forwarded-For header may be believed. Leave it empty unless the app
+	// really sits behind proxies you control.
+	TrustedProxies    []netip.Prefix `env:"-"`
+	RawTrustedProxies []string       `env:"TRUSTED_PROXIES" envSeparator:","`
+
+	// TrustedOrigins lists extra origins (scheme://host[:port]) allowed to
+	// send state-changing requests, on top of the app's own origin.
+	TrustedOrigins []string `env:"TRUSTED_ORIGINS" envSeparator:","`
+
+	ShutdownTimeout time.Duration `env:"SHUTDOWN_TIMEOUT" envDefault:"15s"`
 }
 
-// New creates and returns a new configuration instance with defaults, file, and environment overrides.
-func New() *Config {
-	k := koanf.New(".")
-
-	// Set defaults
-	if err := setDefaults(k); err != nil {
-		slog.Error("failed to load default configuration", "error", err)
-		os.Exit(1)
-	}
-
-	// Try to read .env file first
-	if _, err := os.Stat(".env"); err != nil {
-		if !os.IsNotExist(err) {
-			slog.Error("failed to stat .env file", "error", err)
-			os.Exit(1)
-		}
-		slog.Debug("no .env file found")
-	} else if err := loadDotEnvFile(k, ".env"); err != nil {
-		slog.Error("failed to load .env file", "error", err)
-		os.Exit(1)
-	} else {
-		slog.Debug("loaded .env file")
-	}
-
-	// Try to read config file (optional)
-	configFiles := []string{"config.yaml", "config.yml", "./config/config.yaml", "./config/config.yml"}
-	configLoaded := false
-	for _, configFile := range configFiles {
-		if err := k.Load(file.Provider(configFile), yaml.Parser()); err == nil {
-			slog.Info("loaded configuration from file", "file", configFile)
-			configLoaded = true
-			break
-		}
-	}
-	if !configLoaded {
-		slog.Debug("no config file found, using defaults and environment variables")
-	}
-
-	// Environment variable handling
-	if err := k.Load(env.Provider("", ".", envKeyToKoanfKey), nil); err != nil {
-		slog.Error("failed to load environment configuration", "error", err)
-		os.Exit(1)
-	}
-
-	// Unmarshal into config struct
-	var cfg Config
-	if err := k.UnmarshalWithConf("", &cfg, koanf.UnmarshalConf{Tag: "mapstructure"}); err != nil {
-		slog.Error("failed to unmarshal config", "error", err)
-		os.Exit(1)
-	}
-
-	applyDerivedDefaults(k, &cfg)
-
-	// Construct database URL if not provided directly
-	if cfg.Database.URL == "" {
-		user := k.String("database.user")
-		password := k.String("database.password")
-		host := k.String("database.host")
-		port := k.String("database.port")
-		name := k.String("database.name")
-		sslmode := k.String("database.ssl_mode")
-		if sslmode == "" {
-			sslmode = k.String("database.sslmode")
-		}
-
-		// Set defaults for missing values
-		if host == "" {
-			host = "localhost"
-		}
-		if port == "" {
-			port = "5432"
-		}
-		if name == "" {
-			name = "gowebserver"
-		}
-		if sslmode == "" {
-			sslmode = "disable"
-		}
-
-		if user != "" && password != "" {
-			cfg.Database.URL = buildDatabaseURL(user, password, host, port, name, sslmode)
-		} else {
-			slog.Error("DATABASE_URL not provided and DATABASE_USER/DATABASE_PASSWORD not found in environment")
-			os.Exit(1)
-		}
-	}
-
-	// Production overrides
-	if cfg.App.Environment == "production" {
-		cfg.App.Debug = false
-		cfg.App.LogFormat = "json"
-		cfg.Security.AllowedOrigins = []string{}
-		cfg.Database.RunMigrations = false
-	}
-
-	return &cfg
+// Load reads the configuration from the process environment.
+func Load() (Config, error) {
+	return parse(env.Options{})
 }
 
-func setDefaults(k *koanf.Koanf) error {
-	// Create a defaults map
-	defaults := map[string]interface{}{
-		// Server defaults
-		"server.port":             "8080",
-		"server.host":             "",
-		"server.read_timeout":     10 * time.Second,
-		"server.write_timeout":    10 * time.Second,
-		"server.shutdown_timeout": 30 * time.Second,
-
-		// Database defaults - will be overridden by environment variables
-		"database.url":                "", // Will be constructed from individual vars if not set
-		"database.max_connections":    25,
-		"database.min_connections":    5,
-		"database.timeout":            30 * time.Second,
-		"database.max_conn_lifetime":  time.Hour,
-		"database.max_conn_idle_time": 30 * time.Minute,
-		"database.run_migrations":     true,
-		"database.ssl_mode":           "disable",
-
-		// Application defaults
-		"app.environment": "development",
-		"app.debug":       false,
-		"app.log_level":   "info",
-		"app.log_format":  "text",
-
-		// Security defaults
-		"security.trusted_proxies": []string{},
-		"security.enable_cors":     true,
-		"security.allowed_origins": []string{"*"},
-
-		// Feature flags defaults
-		"features.enable_metrics": false,
-		"features.enable_pprof":   false,
-
-		// Authentication defaults
-		"auth.jwt_secret":       "change-this-in-production",
-		"auth.token_duration":   24 * time.Hour,
-		"auth.refresh_duration": 7 * 24 * time.Hour,
-		"auth.cookie_name":      "auth_token",
+// LoadFrom reads the configuration from environ instead of the process
+// environment. Tests use it to stay hermetic.
+func LoadFrom(environ map[string]string) (Config, error) {
+	if environ == nil {
+		environ = map[string]string{}
 	}
-
-	// Load defaults using the confmap provider
-	return k.Load(confmap.Provider(defaults, "."), nil)
+	return parse(env.Options{Environment: environ})
 }
 
-func loadDotEnvFile(k *koanf.Koanf, path string) (err error) {
-	cleanPath := filepath.Clean(path)
-	// #nosec G304 -- the path is limited to the caller-selected local .env location or a test temp file.
-	file, err := os.Open(cleanPath)
+func parse(opts env.Options) (Config, error) {
+	cfg, err := env.ParseAsWithOptions[Config](opts)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
+		return Config{}, fmt.Errorf("config: %w", err)
 	}
-	defer func() {
-		if closeErr := file.Close(); err == nil && closeErr != nil {
-			err = closeErr
-		}
-	}()
-
-	values := map[string]interface{}{}
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		if strings.HasPrefix(line, "export ") {
-			line = strings.TrimSpace(strings.TrimPrefix(line, "export "))
-		}
-
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-
-		key := envKeyToKoanfKey(strings.TrimSpace(parts[0]))
-		value := strings.TrimSpace(parts[1])
-		if len(value) >= 2 {
-			if (strings.HasPrefix(value, `"`) && strings.HasSuffix(value, `"`)) ||
-				(strings.HasPrefix(value, `'`) && strings.HasSuffix(value, `'`)) {
-				value = value[1 : len(value)-1]
-			}
-		}
-
-		values[key] = value
+	if err := cfg.finalize(); err != nil {
+		return Config{}, fmt.Errorf("config: %w", err)
 	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-	if len(values) == 0 {
-		return nil
-	}
-
-	return k.Load(confmap.Provider(values, "."), nil)
+	return cfg, nil
 }
 
-func envKeyToKoanfKey(s string) string {
-	key := strings.ToLower(strings.TrimSpace(s))
-	parts := strings.SplitN(key, "_", 2)
-	if len(parts) == 2 {
-		return parts[0] + "." + parts[1]
-	}
-	return key
+// IsProduction reports whether the app runs with production hardening.
+func (c Config) IsProduction() bool {
+	return c.Env == EnvProduction
 }
 
-// GetLogLevel converts the string log level to slog.Level.
-func (c *Config) GetLogLevel() slog.Level {
-	switch strings.ToLower(c.App.LogLevel) {
-	case "debug":
-		return slog.LevelDebug
-	case "warn", "warning":
-		return slog.LevelWarn
-	case "error":
-		return slog.LevelError
+// CookieSecure reports whether cookies should be marked Secure.
+func (c Config) CookieSecure() bool {
+	if c.SessionCookieSecure != nil {
+		return *c.SessionCookieSecure
+	}
+	return c.IsProduction()
+}
+
+// DatabaseTarget describes the database for logs without the credentials.
+func (c Config) DatabaseTarget() string {
+	u, err := url.Parse(c.DatabaseURL)
+	if err != nil || u.Host == "" {
+		return "configured database"
+	}
+	return u.Host + u.Path
+}
+
+func (c *Config) finalize() error {
+	var errs []error
+
+	c.Env = strings.ToLower(strings.TrimSpace(c.Env))
+	if c.Env != EnvDevelopment && c.Env != EnvProduction {
+		errs = append(errs, fmt.Errorf("APP_ENV must be %q or %q, got %q", EnvDevelopment, EnvProduction, c.Env))
+	}
+
+	if c.HTTPAddr == "" {
+		c.HTTPAddr = ":8080"
+		if c.Port != "" {
+			c.HTTPAddr = net.JoinHostPort("", c.Port)
+		}
+	}
+
+	c.LogFormat = strings.ToLower(strings.TrimSpace(c.LogFormat))
+	switch c.LogFormat {
+	case "":
+		c.LogFormat = "text"
+		if c.IsProduction() {
+			c.LogFormat = "json"
+		}
+	case "text", "json":
 	default:
-		return slog.LevelInfo
+		errs = append(errs, fmt.Errorf("LOG_FORMAT must be \"text\" or \"json\", got %q", c.LogFormat))
 	}
+
+	if c.DatabaseMaxConns < 1 {
+		errs = append(errs, fmt.Errorf("DATABASE_MAX_CONNS must be at least 1, got %d", c.DatabaseMaxConns))
+	}
+	if c.SessionLifetime <= 0 {
+		errs = append(errs, fmt.Errorf("SESSION_LIFETIME must be positive, got %s", c.SessionLifetime))
+	}
+	if c.ShutdownTimeout <= 0 {
+		errs = append(errs, fmt.Errorf("SHUTDOWN_TIMEOUT must be positive, got %s", c.ShutdownTimeout))
+	}
+
+	c.TrustedProxies = c.TrustedProxies[:0]
+	for _, raw := range c.RawTrustedProxies {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			continue
+		}
+		prefix, err := parsePrefix(raw)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("TRUSTED_PROXIES: %q is not an IP address or CIDR range", raw))
+			continue
+		}
+		c.TrustedProxies = append(c.TrustedProxies, prefix)
+	}
+
+	origins := c.TrustedOrigins[:0]
+	for _, origin := range c.TrustedOrigins {
+		if origin = strings.TrimSpace(origin); origin != "" {
+			origins = append(origins, origin)
+		}
+	}
+	c.TrustedOrigins = origins
+
+	return errors.Join(errs...)
 }
 
-func applyDerivedDefaults(k *koanf.Koanf, cfg *Config) {
-	if !k.Exists("auth.cookie_secure") {
-		cfg.Auth.CookieSecure = strings.EqualFold(cfg.App.Environment, "production")
+// parsePrefix accepts either a CIDR range or a single address, which it
+// widens to a one-address range.
+func parsePrefix(s string) (netip.Prefix, error) {
+	if prefix, err := netip.ParsePrefix(s); err == nil {
+		return prefix.Masked(), nil
 	}
-}
 
-func buildDatabaseURL(user, password, host, port, name, sslmode string) string {
-	query := url.Values{}
-	query.Set("sslmode", sslmode)
-
-	return (&url.URL{
-		Scheme:   "postgres",
-		User:     url.UserPassword(user, password),
-		Host:     net.JoinHostPort(host, port),
-		Path:     "/" + name,
-		RawQuery: query.Encode(),
-	}).String()
+	addr, err := netip.ParseAddr(s)
+	if err != nil {
+		return netip.Prefix{}, err
+	}
+	addr = addr.Unmap()
+	return netip.PrefixFrom(addr, addr.BitLen()), nil
 }

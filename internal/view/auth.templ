@@ -1,0 +1,76 @@
+package view
+
+import "github.com/dunamismax/go-web-server/internal/auth"
+
+// Login is the sign-in page.
+templ Login(p Page, f LoginForm) {
+	@Layout(p) {
+		<div class="mx-auto max-w-sm">
+			<h1 class="text-2xl font-semibold tracking-tight">Sign in</h1>
+			<form method="post" action="/login" class="mt-6 space-y-4">
+				@formError(f.Errors)
+				if f.Next != "" {
+					<input type="hidden" name="next" value={ f.Next }/>
+				}
+				@field(Field{
+					Label: "Email", Name: "email", Type: "email", Value: f.Email,
+					Error: f.Errors.Get("email"), Autocomplete: "username",
+					Required: true, Autofocus: f.Errors.focus("email", true, "email", "password"),
+				})
+				@field(Field{
+					Label: "Password", Name: "password", Type: "password",
+					Error: f.Errors.Get("password"), Autocomplete: "current-password",
+					Required: true, Autofocus: f.Errors.focus("password", true, "email", "password"),
+				})
+				<button type="submit" class="btn btn-primary w-full">Sign in</button>
+			</form>
+			<p class="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+				New here? <a href="/register" class="link">Create an account</a>
+			</p>
+		</div>
+	}
+}
+
+// Register is the sign-up page.
+templ Register(p Page, f RegisterForm) {
+	@Layout(p) {
+		<div class="mx-auto max-w-sm">
+			<h1 class="text-2xl font-semibold tracking-tight">Create an account</h1>
+			<form method="post" action="/register" class="mt-6 space-y-4">
+				@formError(f.Errors)
+				@field(Field{
+					Label: "Name", Name: "name", Type: "text", Value: f.Name,
+					Error: f.Errors.Get("name"), Autocomplete: "name",
+					Required: true, MaxLength: 100,
+					Autofocus: f.Errors.focus("name", true, "name", "email", "password"),
+				})
+				@field(Field{
+					Label: "Email", Name: "email", Type: "email", Value: f.Email,
+					Error: f.Errors.Get("email"), Autocomplete: "username",
+					Required: true, MaxLength: 254,
+					Autofocus: f.Errors.focus("email", true, "name", "email", "password"),
+				})
+				@passwordField("password", "Password", f.Errors.Get("password"),
+					f.Errors.focus("password", true, "name", "email", "password"))
+				<button type="submit" class="btn btn-primary w-full">Create account</button>
+			</form>
+			<p class="mt-6 text-sm text-zinc-600 dark:text-zinc-400">
+				Already have an account? <a href="/login" class="link">Sign in</a>
+			</p>
+		</div>
+	}
+}
+
+// passwordField is the input for choosing a new password, with the length
+// rule spelled out.
+templ passwordField(name, label, errMsg string, autofocus bool) {
+	@field(Field{
+		Label: label, Name: name, Type: "password", Error: errMsg,
+		Autofocus:    autofocus,
+		Hint:         passwordHint,
+		Autocomplete: "new-password",
+		Required:     true,
+		MinLength:    auth.MinPasswordLength,
+		MaxLength:    auth.MaxPasswordLength,
+	})
+}

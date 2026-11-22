@@ -1,0 +1,55 @@
+# systemd unit for running the server on a Linux host behind a reverse proxy.
+#
+# Expected layout:
+#   /usr/local/bin/gowebserver   the binary from "make build" (bin/server)
+#   /etc/gowebserver/env         environment file, mode 0640 root:gowebserver
+#   user and group "gowebserver" a system account with no login shell
+#
+# See docs/deployment.md for the full walkthrough.
+
+[Unit]
+Description=Go Web Server
+Documentation=https://github.com/dunamismax/go-web-server
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gowebserver
+Group=gowebserver
+EnvironmentFile=/etc/gowebserver/env
+ExecStart=/usr/local/bin/gowebserver
+Restart=on-failure
+RestartSec=2
+# Must exceed SHUTDOWN_TIMEOUT (15s by default) so in-flight requests finish.
+TimeoutStopSec=20
+
+# Sandboxing. The server needs the network and nothing else: it writes no
+# files, and logs go to the journal through stdout.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectProc=invisible
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

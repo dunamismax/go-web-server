@@ -1,0 +1,228 @@
+package view
+
+import "github.com/dunamismax/go-web-server/internal/store"
+
+// Users is the admin user-management page.
+//
+// The search box is progressively enhanced: with JavaScript, htmx fetches
+// matching rows as you type and swaps in just UserResults. Without it, the
+// form submits as an ordinary GET.
+templ Users(p Page, list UserList) {
+	@Layout(p) {
+		<div class="flex flex-wrap items-center justify-between gap-4">
+			<h1 class="text-2xl font-semibold tracking-tight">Users</h1>
+			<a href="/users/new" class="btn btn-primary">New user</a>
+		</div>
+		<form method="get" action="/users" role="search" class="mt-6 flex max-w-md gap-2">
+			<label for="q" class="sr-only">Search users</label>
+			<input
+				id="q"
+				name="q"
+				type="search"
+				value={ list.Search }
+				placeholder="Search by name or email"
+				class="input"
+				autocomplete="off"
+				hx-get="/users"
+				hx-trigger="input changed delay:250ms, search"
+				hx-target="#user-results"
+				hx-swap="outerHTML"
+				hx-push-url="true"
+				hx-sync="this:replace"
+			/>
+			<button type="submit" class="btn">Search</button>
+		</form>
+		@UserResults(list)
+	}
+}
+
+// UserResults is the table region of the users page. It renders on its own
+// when htmx asks for a refreshed list.
+templ UserResults(list UserList) {
+	<div id="user-results" class="mt-6">
+		if list.Notice != "" {
+			@banner("notice", list.Notice)
+		}
+		if list.Alert != "" {
+			@banner("alert", list.Alert)
+		}
+		if len(list.Users) > 0 {
+			<div class="overflow-x-auto rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+				<table class="w-full text-left text-sm">
+					<thead class="border-b border-zinc-200 text-xs tracking-wide text-zinc-500 uppercase dark:border-zinc-800 dark:text-zinc-400">
+						<tr>
+							<th scope="col" class="px-4 py-3 font-medium">Name</th>
+							<th scope="col" class="px-4 py-3 font-medium">Email</th>
+							<th scope="col" class="px-4 py-3 font-medium">Role</th>
+							<th scope="col" class="px-4 py-3 font-medium">Status</th>
+							<th scope="col" class="px-4 py-3 font-medium">Joined</th>
+							<th scope="col" class="px-4 py-3 font-medium"><span class="sr-only">Actions</span></th>
+						</tr>
+					</thead>
+					<tbody class="divide-y divide-zinc-100 dark:divide-zinc-800">
+						for _, user := range list.Users {
+							@userRow(user, user.ID == list.SelfID)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		<div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+			<p>{ list.summary() }</p>
+			if list.lastPage() > 1 {
+				<nav aria-label="Pagination" class="flex items-center gap-2">
+					if list.Page > 1 {
+						<a href={ templ.SafeURL(list.pageURL(list.Page - 1)) } class="btn btn-sm" rel="prev">Previous</a>
+					}
+					<span>Page { list.Page } of { list.lastPage() }</span>
+					if list.Page < list.lastPage() {
+						<a href={ templ.SafeURL(list.pageURL(list.Page + 1)) } class="btn btn-sm" rel="next">Next</a>
+					}
+				</nav>
+			}
+		</div>
+	</div>
+}
+
+// userRow is one table row. Its Activate/Deactivate form posts through htmx,
+// which swaps the refreshed UserResults in place. Without JavaScript the
+// same form posts normally and the server redirects back to the list.
+templ userRow(user store.User, isSelf bool) {
+	<tr>
+		<td class="px-4 py-3 font-medium whitespace-nowrap">
+			{ user.Name }
+			if isSelf {
+				<span class="ml-1 font-normal text-zinc-500 dark:text-zinc-400">(you)</span>
+			}
+		</td>
+		<td class="px-4 py-3 whitespace-nowrap text-zinc-600 dark:text-zinc-300">{ user.Email }</td>
+		<td class="px-4 py-3">
+			<span class={ "badge", templ.KV("badge-accent", user.IsAdmin()) }>{ roleLabel(user.Role) }</span>
+		</td>
+		<td class="px-4 py-3">
+			if user.IsActive {
+				<span class="badge badge-ok">Active</span>
+			} else {
+				<span class="badge badge-muted">Inactive</span>
+			}
+		</td>
+		<td class="px-4 py-3 whitespace-nowrap text-zinc-600 dark:text-zinc-300">{ formatDate(user.CreatedAt) }</td>
+		<td class="px-4 py-3">
+			<div class="flex justify-end gap-2">
+				if !isSelf {
+					<form
+						method="post"
+						action={ templ.SafeURL(userPath(user.ID, "/active")) }
+						hx-post={ userPath(user.ID, "/active") }
+						hx-target="#user-results"
+						hx-swap="outerHTML"
+					>
+						if user.IsActive {
+							<input type="hidden" name="active" value="false"/>
+							<button type="submit" class="btn btn-sm">Deactivate</button>
+						} else {
+							<input type="hidden" name="active" value="true"/>
+							<button type="submit" class="btn btn-sm">Activate</button>
+						}
+					</form>
+				}
+				<a href={ templ.SafeURL(userPath(user.ID, "/edit")) } class="btn btn-sm">Edit</a>
+			</div>
+		</td>
+	</tr>
+}
+
+// UserNew is the admin form for adding a user.
+templ UserNew(p Page, f UserForm) {
+	@Layout(p) {
+		<div class="mx-auto max-w-md">
+			<a href="/users" class="link text-sm">← Back to users</a>
+			<h1 class="mt-3 text-2xl font-semibold tracking-tight">New user</h1>
+			<form method="post" action="/users" class="mt-6 space-y-4">
+				@formError(f.Errors)
+				@userFields(f)
+				@passwordField("password", "Password", f.Errors.Get("password"),
+					f.Errors.focus("password", true, "name", "email", "role", "password"))
+				<div class="flex gap-3 pt-2">
+					<button type="submit" class="btn btn-primary">Create user</button>
+					<a href="/users" class="btn">Cancel</a>
+				</div>
+			</form>
+		</div>
+	}
+}
+
+// UserEdit is the admin form for changing or deleting a user.
+templ UserEdit(p Page, f UserForm) {
+	@Layout(p) {
+		<div class="mx-auto max-w-md">
+			<a href="/users" class="link text-sm">← Back to users</a>
+			<h1 class="mt-3 text-2xl font-semibold tracking-tight">Edit user</h1>
+			<form method="post" action={ templ.SafeURL(userPath(f.ID, "")) } class="mt-6 space-y-4">
+				@formError(f.Errors)
+				@userFields(f)
+				@field(Field{
+					Label: "New password", Name: "password", Type: "password",
+					Error:        f.Errors.Get("password"),
+					Hint:         "Leave blank to keep the current password. Setting one signs the user out everywhere.",
+					Autocomplete: "new-password",
+					Autofocus:    f.Errors.focus("password", false, "name", "email", "role", "password"),
+				})
+				<div class="flex gap-3 pt-2">
+					<button type="submit" class="btn btn-primary">Save changes</button>
+					<a href="/users" class="btn">Cancel</a>
+				</div>
+			</form>
+			if !f.IsSelf {
+				<section class="mt-10 rounded-lg border border-red-200 p-4 dark:border-red-900/60" aria-labelledby="delete-heading">
+					<h2 id="delete-heading" class="font-medium">Delete this user</h2>
+					<p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+						This permanently removes the account. Deactivate it instead if you may want it back.
+					</p>
+					<form
+						method="post"
+						action={ templ.SafeURL(userPath(f.ID, "/delete")) }
+						hx-post={ userPath(f.ID, "/delete") }
+						hx-confirm={ "Delete " + f.Name + "? This cannot be undone." }
+						class="mt-3"
+					>
+						<button type="submit" class="btn btn-danger">Delete user</button>
+					</form>
+				</section>
+			}
+		</div>
+	}
+}
+
+templ userFields(f UserForm) {
+	@field(Field{
+		Label: "Name", Name: "name", Type: "text", Value: f.Name,
+		Error: f.Errors.Get("name"), Required: true, MaxLength: 100,
+		Autofocus: f.Errors.focus("name", f.ID == 0, "name", "email", "role", "password"),
+	})
+	@field(Field{
+		Label: "Email", Name: "email", Type: "email", Value: f.Email,
+		Error: f.Errors.Get("email"), Required: true, MaxLength: 254,
+		Autofocus: f.Errors.focus("email", f.ID == 0, "name", "email", "role", "password"),
+	})
+	<div>
+		<label for="role" class="label">Role</label>
+		<select
+			id="role"
+			name="role"
+			class={ "input", templ.KV("input-invalid", f.Errors.Get("role") != "") }
+			disabled?={ f.IsSelf }
+			autofocus?={ f.Errors.focus("role", false, "name", "email", "role", "password") }
+		>
+			<option value={ string(store.RoleMember) } selected?={ f.Role != store.RoleAdmin }>Member</option>
+			<option value={ string(store.RoleAdmin) } selected?={ f.Role == store.RoleAdmin }>Admin</option>
+		</select>
+		if f.Errors.Get("role") != "" {
+			<p class="field-error">{ f.Errors.Get("role") }</p>
+		} else if f.IsSelf {
+			<p class="hint">You cannot change your own role.</p>
+		} else {
+			<p class="hint">Admins can manage every user.</p>
+		}
+	</div>
+}

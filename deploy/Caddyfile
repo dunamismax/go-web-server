@@ -1,0 +1,17 @@
+# Example Caddy site for the server listening on 127.0.0.1:8080.
+#
+# Caddy obtains and renews the TLS certificate, compresses responses, and
+# passes the client address in X-Forwarded-For. For the app to believe that
+# header, set TRUSTED_PROXIES=127.0.0.1 in its environment.
+#
+# Replace example.com with your domain.
+
+example.com {
+	encode zstd gzip
+
+	reverse_proxy 127.0.0.1:8080 {
+		# Take the instance out of rotation while its database is unreachable.
+		health_uri /readyz
+		health_interval 10s
+	}
+}

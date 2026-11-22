@@ -1,13 +1,20 @@
 version: "2"
 sql:
-  - engine: "postgresql"
-    queries: "internal/store/queries.sql"
-    schema: "internal/store/schema.sql"
+  - engine: postgresql
+    # The goose migrations are the single source of truth for the schema.
+    schema: internal/store/migrations
+    queries: internal/store/queries
     gen:
       go:
-        package: "store"
-        out: "internal/store"
-        sql_package: "pgx/v5"
-        emit_json_tags: true
-        emit_db_tags: true
+        package: store
+        out: internal/store
+        sql_package: pgx/v5
+        emit_empty_slices: true
         emit_pointers_for_null_types: true
+        omit_unused_structs: true
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
+          - column: users.role
+            go_type:
+              type: Role

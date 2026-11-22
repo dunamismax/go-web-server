@@ -1,0 +1,12 @@
+.git
+.github
+.env
+.env.*
+bin
+tmp
+docs
+deploy
+*.md
+compose.yaml
+Dockerfile
+.dockerignore

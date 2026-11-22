@@ -1,0 +1,19 @@
+package view
+
+// ErrorPage is shown for any failed request: not found, forbidden, rate
+// limited, or an unexpected server error.
+templ ErrorPage(p Page, status int, heading, message, requestID string) {
+	@Layout(p) {
+		<div class="mx-auto max-w-md py-10 text-center">
+			<p class="text-sm font-semibold text-zinc-500 dark:text-zinc-400">{ status }</p>
+			<h1 class="mt-2 text-2xl font-semibold tracking-tight">{ heading }</h1>
+			<p class="mt-3 text-zinc-600 dark:text-zinc-300">{ message }</p>
+			<a href="/" class="btn mt-6">Back to home</a>
+			if status >= 500 && requestID != "" {
+				<p class="mt-8 text-xs text-zinc-500 dark:text-zinc-400">
+					Reference: <code>{ requestID }</code>
+				</p>
+			}
+		</div>
+	}
+}

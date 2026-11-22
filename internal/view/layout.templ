@@ -1,0 +1,153 @@
+package view
+
+import "github.com/dunamismax/go-web-server/internal/assets"
+
+// Layout is the HTML shell shared by every page.
+templ Layout(p Page) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<meta name="color-scheme" content="light dark"/>
+			<meta name="htmx-config" content={ htmxConfig }/>
+			<title>{ p.fullTitle() }</title>
+			<link rel="icon" href="/favicon.ico" sizes="32x32"/>
+			<link rel="stylesheet" href={ assets.Path("app.css") }/>
+			<script src={ assets.Path("htmx.min.js") } defer></script>
+		</head>
+		<body class="flex min-h-dvh flex-col bg-zinc-50 text-zinc-900 antialiased dark:bg-zinc-950 dark:text-zinc-100">
+			<a href="#main" class="skip-link">Skip to content</a>
+			@header(p)
+			<main id="main" class="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+				if p.Notice != "" {
+					@banner("notice", p.Notice)
+				}
+				if p.Alert != "" {
+					@banner("alert", p.Alert)
+				}
+				{ children... }
+			</main>
+			<footer class="border-t border-zinc-200 py-6 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+				{ AppName } · Go, templ, htmx, Tailwind CSS and PostgreSQL in one binary
+			</footer>
+		</body>
+	</html>
+}
+
+templ header(p Page) {
+	<header class="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+		<div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
+			<a href="/" class="text-base font-semibold tracking-tight">{ AppName }</a>
+			<nav aria-label="Main" class="flex flex-1 items-center gap-1 text-sm">
+				@navLink(p, "/", "Home")
+				if p.User != nil {
+					if p.User.IsAdmin() {
+						@navLink(p, "/users", "Users")
+					}
+					@navLink(p, "/account", "Account")
+				}
+			</nav>
+			<div class="flex items-center gap-2 text-sm">
+				if p.User != nil {
+					<span class="hidden text-zinc-500 sm:inline dark:text-zinc-400">{ p.User.Name }</span>
+					<form method="post" action="/logout">
+						<button type="submit" class="btn btn-quiet">Sign out</button>
+					</form>
+				} else {
+					<a href="/login" class="btn btn-quiet">Sign in</a>
+					<a href="/register" class="btn btn-primary">Create account</a>
+				}
+			</div>
+		</div>
+	</header>
+}
+
+templ navLink(p Page, href, label string) {
+	<a
+		href={ templ.SafeURL(href) }
+		class={ "nav-link", templ.KV("nav-link-current", isCurrent(p.Path, href)) }
+		if isCurrent(p.Path, href) {
+			aria-current="page"
+		}
+	>{ label }</a>
+}
+
+// banner shows a one-time message. kind is "notice" or "alert".
+templ banner(kind, message string) {
+	<div
+		class={ "banner", templ.KV("banner-notice", kind == "notice"), templ.KV("banner-alert", kind == "alert") }
+		if kind == "alert" {
+			role="alert"
+		} else {
+			role="status"
+		}
+	>{ message }</div>
+}
+
+// Field describes one labelled form input.
+type Field struct {
+	Label        string
+	Name         string
+	Type         string
+	Value        string
+	Hint         string
+	Error        string
+	Autocomplete string
+	Required     bool
+	Autofocus    bool
+	MinLength    int
+	MaxLength    int
+}
+
+templ field(f Field) {
+	<div>
+		<label for={ f.Name } class="label">{ f.Label }</label>
+		<input
+			id={ f.Name }
+			name={ f.Name }
+			type={ f.Type }
+			value={ f.Value }
+			class={ "input", templ.KV("input-invalid", f.Error != "") }
+			required?={ f.Required }
+			autofocus?={ f.Autofocus }
+			if f.Autocomplete != "" {
+				autocomplete={ f.Autocomplete }
+			}
+			if f.MinLength > 0 {
+				minlength={ f.MinLength }
+			}
+			if f.MaxLength > 0 {
+				maxlength={ f.MaxLength }
+			}
+			if f.Error != "" {
+				aria-invalid="true"
+				aria-describedby={ f.Name + "-error" }
+			}
+			else
+			if f.Hint != "" {
+				aria-describedby={ f.Name + "-hint" }
+			}
+		/>
+		if f.Error != "" {
+			<p id={ f.Name + "-error" } class="field-error">{ f.Error }</p>
+		} else if f.Hint != "" {
+			<p id={ f.Name + "-hint" } class="hint">{ f.Hint }</p>
+		}
+	</div>
+}
+
+// formError shows a message about the form as a whole, such as a failed
+// sign-in.
+templ formError(errs Errors) {
+	if msg := errs.Get(""); msg != "" {
+		@banner("alert", msg)
+	}
+}
+
+func isCurrent(path, href string) bool {
+	if href == "/" {
+		return path == "/"
+	}
+	return path == href || len(path) > len(href) && path[:len(href)+1] == href+"/"
+}

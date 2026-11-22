@@ -2,53 +2,65 @@ version: "2"
 
 run:
   timeout: 5m
-  tests: true
-  go: "1.26.1"
-
-
 
 linters:
   enable:
-    - errcheck
-    - govet
-    - staticcheck
-    - unused
-    - ineffassign
+    - bodyclose
+    - copyloopvar
+    - errorlint
+    - gocritic
     - gosec
     - misspell
+    - nilerr
+    - nilnil
+    - noctx
+    - perfsprint
     - revive
+    - sloglint
     - unconvert
     - unparam
+    - usestdlibvars
     - whitespace
-    - goconst
-    - gocritic
-  disable:
-    - cyclop
-    - funlen
-    - gocognit
-    - nestif
-    - lll
-    - wsl
   settings:
+    errcheck:
+      exclude-functions:
+        # Writes to stdout from the CLI; there is nothing to do if they fail.
+        - fmt.Fprintf
+        - fmt.Fprintln
     revive:
       rules:
+        - name: exported
+        - name: package-comments
         - name: unused-parameter
-          disabled: true
-    gocritic:
-      disabled-checks:
-        - exitAfterDefer
+        - name: error-return
+        - name: error-naming
+        - name: var-naming
+        - name: receiver-naming
+        - name: indent-error-flow
+    sloglint:
+      # Keys are passed either as slog.Attr or as pairs within one call.
+      no-mixed-args: true
   exclusions:
+    # sqlc and templ output is checked in but not hand-written.
+    generated: strict
     rules:
       - path: _test\.go
         linters:
           - errcheck
           - gosec
-      - path: internal/store/queries.sql.go
-        linters:
-          - revive
-      - path: internal/ui/embed.go
-        linters:
-          - staticcheck
+          - noctx
+          - perfsprint
+
+formatters:
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/dunamismax/go-web-server
+  exclusions:
+    generated: strict
 
 issues:
   max-issues-per-linter: 0

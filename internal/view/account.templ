@@ -1,0 +1,59 @@
+package view
+
+// Account lets a signed-in user edit their profile and change their password.
+templ Account(p Page, profile ProfileForm, password PasswordForm) {
+	@Layout(p) {
+		<h1 class="text-2xl font-semibold tracking-tight">Your account</h1>
+		<div class="mt-8 grid gap-8 lg:grid-cols-2">
+			<section class="card" aria-labelledby="profile-heading">
+				<h2 id="profile-heading" class="text-lg font-medium">Profile</h2>
+				<form method="post" action="/account/profile" class="mt-4 space-y-4">
+					@formError(profile.Errors)
+					@field(Field{
+						Label: "Name", Name: "name", Type: "text", Value: profile.Name,
+						Error: profile.Errors.Get("name"), Autocomplete: "name",
+						Required: true, MaxLength: 100,
+						Autofocus: profile.Errors.focus("name", false, "name", "email"),
+					})
+					@field(Field{
+						Label: "Email", Name: "email", Type: "email", Value: profile.Email,
+						Error: profile.Errors.Get("email"), Autocomplete: "username",
+						Required: true, MaxLength: 254,
+						Autofocus: profile.Errors.focus("email", false, "name", "email"),
+					})
+					<button type="submit" class="btn btn-primary">Save profile</button>
+				</form>
+			</section>
+			<section class="card" aria-labelledby="password-heading">
+				<h2 id="password-heading" class="text-lg font-medium">Password</h2>
+				<p class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+					Changing your password signs you out everywhere else.
+				</p>
+				<form method="post" action="/account/password" class="mt-4 space-y-4">
+					@formError(password.Errors)
+					@field(Field{
+						Label: "Current password", Name: "current_password", Type: "password",
+						Error: password.Errors.Get("current_password"), Autocomplete: "current-password",
+						Required:  true,
+						Autofocus: password.Errors.focus("current_password", false, "current_password", "new_password"),
+					})
+					@passwordField("new_password", "New password", password.Errors.Get("new_password"),
+						password.Errors.focus("new_password", false, "current_password", "new_password"))
+					<button type="submit" class="btn btn-primary">Change password</button>
+				</form>
+			</section>
+		</div>
+		if p.User != nil {
+			<dl class="mt-8 flex flex-wrap gap-x-8 gap-y-2 text-sm text-zinc-600 dark:text-zinc-400">
+				<div class="flex gap-2">
+					<dt>Role</dt>
+					<dd class="font-medium text-zinc-900 dark:text-zinc-100">{ roleLabel(p.User.Role) }</dd>
+				</div>
+				<div class="flex gap-2">
+					<dt>Member since</dt>
+					<dd class="font-medium text-zinc-900 dark:text-zinc-100">{ formatDate(p.User.CreatedAt) }</dd>
+				</div>
+			</dl>
+		}
+	}
+}

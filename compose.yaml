@@ -1,0 +1,45 @@
+# Local development services.
+#
+#   make db-up        PostgreSQL only; run the app on the host with "make dev"
+#   docker compose --profile app up --build
+#                     PostgreSQL plus the app built from the Dockerfile
+#
+# The credentials here are for local development only.
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: gowebserver
+      POSTGRES_PASSWORD: gowebserver
+      POSTGRES_DB: gowebserver
+    ports:
+      # Set DB_PORT if something else already listens on 5432, and change the
+      # port in DATABASE_URL to match.
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gowebserver -d gowebserver"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  app:
+    profiles: [app]
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-compose}
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgres://gowebserver:gowebserver@db:5432/gowebserver?sslmode=disable
+      # Plain HTTP on localhost. Behind TLS, remove this line.
+      SESSION_COOKIE_SECURE: "false"
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:

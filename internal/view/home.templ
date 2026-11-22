@@ -1,0 +1,57 @@
+package view
+
+// Home is the landing page.
+templ Home(p Page) {
+	@Layout(p) {
+		<section class="max-w-2xl">
+			<h1 class="text-3xl font-semibold tracking-tight sm:text-4xl">
+				if p.User != nil {
+					Welcome back, { p.User.Name }.
+				} else {
+					A Go web app you can start from.
+				}
+			</h1>
+			<p class="mt-4 text-lg text-zinc-600 dark:text-zinc-300">
+				Server-rendered pages, session sign-in, role-based access and a PostgreSQL
+				database, compiled into a single binary. Clone it, rename it, and start on
+				the part that is actually yours.
+			</p>
+			<div class="mt-6 flex flex-wrap gap-3">
+				if p.User == nil {
+					<a href="/register" class="btn btn-primary">Create an account</a>
+					<a href="/login" class="btn">Sign in</a>
+				} else {
+					if p.User.IsAdmin() {
+						<a href="/users" class="btn btn-primary">Manage users</a>
+					}
+					<a href="/account" class="btn">Your account</a>
+				}
+			</div>
+			if p.User == nil {
+				<p class="mt-3 text-sm text-zinc-500 dark:text-zinc-400">
+					The first account created on a fresh database becomes the administrator.
+				</p>
+			}
+		</section>
+		<section class="mt-14" aria-labelledby="stack-heading">
+			<h2 id="stack-heading" class="text-sm font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+				What it is built from
+			</h2>
+			<dl class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				@stackItem("net/http", "The standard library router and server. No web framework to outgrow or migrate.")
+				@stackItem("templ", "Type-checked HTML components that compile to Go, so a typo fails the build.")
+				@stackItem("htmx", "Search-as-you-type and in-place updates. Every page still works without JavaScript.")
+				@stackItem("Tailwind CSS", "Compiled by the standalone CLI. There is no Node.js toolchain anywhere.")
+				@stackItem("PostgreSQL + sqlc", "Plain SQL queries turned into type-safe Go, running on pgx.")
+				@stackItem("goose", "Migrations embedded in the binary and applied at startup or on demand.")
+			</dl>
+		</section>
+	}
+}
+
+templ stackItem(name, description string) {
+	<div class="card">
+		<dt class="font-medium">{ name }</dt>
+		<dd class="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{ description }</dd>
+	</div>
+}

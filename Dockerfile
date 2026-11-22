@@ -1,49 +1,37 @@
-# Build stage
-FROM golang:1.26.1-alpine AS builder
+# syntax=docker/dockerfile:1
 
-WORKDIR /app
+# Build stage. The generated code (sqlc, templ, CSS) is checked in, so the
+# image needs nothing but the Go toolchain.
+FROM golang:1.27 AS build
+WORKDIR /src
 
-# Install build dependencies
-RUN apk add --no-cache ca-certificates git
-
-# Copy go mod files
 COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
-# Download dependencies
-RUN go mod download
-
-# Copy source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o server ./cmd/web
+# The build context has no .git directory, so the version is passed in. See
+# the "docker" target in the Makefile.
+ARG VERSION=""
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath \
+      -ldflags="-s -w -X github.com/dunamismax/go-web-server/internal/version.override=${VERSION}" \
+      -o /out/server ./cmd/server
 
-# Final stage
-FROM alpine:latest
+# Runtime stage: a static binary on distroless, running as a non-root user.
+# The image has no shell or package manager.
+FROM gcr.io/distroless/static-debian13:nonroot
 
-# Install runtime dependencies
-RUN apk --no-cache add ca-certificates tzdata wget
+COPY --from=build /out/server /server
 
-WORKDIR /root/
-
-# Copy the binary from builder stage
-COPY --from=builder /app/server .
-
-# Copy configuration files
-COPY --from=builder /app/atlas.hcl .
-
-# Create non-root user
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -u 1001 -S appuser -G appgroup
-
-USER appuser
-
-# Expose port
+ENV APP_ENV=production \
+    HTTP_ADDR=:8080
 EXPOSE 8080
+USER nonroot:nonroot
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+# The binary probes itself; distroless has no curl or wget.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["/server", "healthcheck"]
 
-# Command to run
-CMD ["./server"]
+ENTRYPOINT ["/server"]

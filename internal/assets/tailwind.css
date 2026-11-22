@@ -1,0 +1,123 @@
+/*
+ * Tailwind CSS source. "make css" compiles it to static/app.css with the
+ * standalone CLI; there is no Node.js toolchain. Class names are collected
+ * from the templ components only.
+ */
+@import "tailwindcss" source(none);
+@source "../view";
+
+@theme {
+  /* Gopher blue, tuned for 4.5:1 contrast with white text at 600. */
+  --color-brand-50: oklch(0.97 0.02 215);
+  --color-brand-100: oklch(0.94 0.04 215);
+  --color-brand-300: oklch(0.82 0.1 215);
+  --color-brand-400: oklch(0.74 0.12 215);
+  --color-brand-500: oklch(0.64 0.12 220);
+  --color-brand-600: oklch(0.52 0.1 225);
+  --color-brand-700: oklch(0.44 0.09 228);
+}
+
+@layer base {
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+
+  code {
+    @apply font-mono text-[0.9em];
+  }
+}
+
+@layer components {
+  .skip-link {
+    @apply sr-only rounded-md bg-white px-3 py-2 text-sm font-medium text-zinc-900 shadow focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-10;
+  }
+
+  .link {
+    @apply font-medium text-brand-700 underline decoration-brand-300 underline-offset-2 hover:decoration-brand-600 dark:text-brand-300 dark:decoration-brand-700;
+  }
+
+  .nav-link {
+    @apply rounded-md px-3 py-1.5 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800 dark:hover:text-white;
+  }
+
+  .nav-link-current {
+    @apply bg-zinc-100 font-medium text-zinc-900 dark:bg-zinc-800 dark:text-white;
+  }
+
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center rounded-md border border-zinc-300 bg-white px-3.5 py-2 text-sm font-medium text-zinc-900 shadow-xs hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800;
+  }
+
+  .btn-sm {
+    @apply px-2.5 py-1 text-xs;
+  }
+
+  .btn-primary {
+    @apply border-brand-600 bg-brand-600 text-white hover:border-brand-700 hover:bg-brand-700 dark:border-brand-600 dark:bg-brand-600 dark:text-white dark:hover:border-brand-500 dark:hover:bg-brand-500;
+  }
+
+  .btn-danger {
+    @apply border-red-600 bg-red-600 text-white hover:border-red-700 hover:bg-red-700 dark:border-red-600 dark:bg-red-600 dark:text-white dark:hover:border-red-500 dark:hover:bg-red-500;
+  }
+
+  .btn-quiet {
+    @apply border-transparent bg-transparent shadow-none hover:bg-zinc-100 dark:border-transparent dark:bg-transparent dark:hover:bg-zinc-800;
+  }
+
+  .card {
+    @apply rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium;
+  }
+
+  .input {
+    @apply block w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 shadow-xs placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500;
+  }
+
+  .input-invalid {
+    @apply border-red-500 dark:border-red-500;
+  }
+
+  .hint {
+    @apply mt-1.5 text-xs text-zinc-500 dark:text-zinc-400;
+  }
+
+  .field-error {
+    @apply mt-1.5 text-xs font-medium text-red-700 dark:text-red-400;
+  }
+
+  .banner {
+    @apply mb-6 rounded-md border px-4 py-3 text-sm;
+  }
+
+  .banner-notice {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200;
+  }
+
+  .banner-alert {
+    @apply border-red-200 bg-red-50 text-red-900 dark:border-red-900 dark:bg-red-950 dark:text-red-200;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300;
+  }
+
+  .badge-accent {
+    @apply bg-brand-100 text-brand-700 dark:bg-brand-700/40 dark:text-brand-100;
+  }
+
+  .badge-ok {
+    @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300;
+  }
+
+  .badge-muted {
+    @apply bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400;
+  }
+
+  /* htmx marks the element that started a request; dim it while waiting. */
+  .htmx-request {
+    @apply opacity-60 transition-opacity;
+  }
+}

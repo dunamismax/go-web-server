@@ -1,113 +1,144 @@
-# Development Guide
+# Development
 
-## Tooling
+## Requirements
 
-Required for normal development:
+- Go 1.27 or newer
+- `make` and `curl`
+- PostgreSQL 14 or newer, or Docker to run it for you
 
-- Go
-- PostgreSQL
-- Mage
-- Bun for the `web/` frontend workspace
+Everything else is fetched on demand at a pinned version:
 
-Optional but commonly useful:
+| Tool | How it is run | Where the version lives |
+| --- | --- | --- |
+| templ | `go tool templ` | `go.mod` (a `tool` dependency, so the generator always matches the runtime library) |
+| sqlc, golangci-lint, govulncheck | `go run <pkg>@<version>` | top of the `Makefile` |
+| Tailwind CLI | downloaded to `bin/`, SHA-256 verified | top of the `Makefile` |
+| htmx | vendored at `internal/assets/static/htmx.min.js` | top of the `Makefile` |
 
-- Docker for smoke scripts that self-start PostgreSQL
-- Air for Go hot reload
-- Playwright browsers for frontend smoke validation
+The first `make lint` and `make sqlc` compile their tools, which takes a
+minute or two. After that the Go build cache makes them instant.
 
-## First-Time Setup
-
-```bash
-cp .env.example .env
-mage setup
-mage generate
-```
-
-Then start the app:
+## First run
 
 ```bash
-mage dev
+make setup
+make db-up
+make dev
 ```
 
-## Core Commands
+Then open <http://localhost:7331>.
 
-| Command | Purpose |
+`make dev` runs two watchers:
+
+- `templ generate --watch` regenerates Go from `.templ` files, restarts the
+  server when Go code changes, and reloads the browser through its proxy on
+  port 7331.
+- The Tailwind CLI rebuilds `internal/assets/static/app.css` when the classes
+  used in the templates change.
+
+In development the server reads static files from disk, so a CSS rebuild
+shows up on the next page load without a restart.
+
+## What to run after changing what
+
+| You changed | Run |
 | --- | --- |
-| `mage setup` | Install Go tools and download dependencies |
-| `mage dev` | Run the Go app with Air |
-| `mage run` | Build and run once |
-| `mage generate` | Regenerate SQLC output |
-| `mage fmt` | Format Go code and tidy modules |
-| `mage vet` | Run `go vet ./...` |
-| `mage test` | Run `go test ./...` |
-| `mage lint` | Run `golangci-lint` |
-| `mage quality` | Run vet, test, lint, and `govulncheck` |
-| `mage ci` | Run the main local CI-style pipeline |
-| `mage migrate` | Apply Atlas migrations |
-| `mage migrateStatus` | Show Atlas migration status |
+| A `.templ` file | `make templ` (or let `make dev` do it) |
+| `internal/assets/tailwind.css`, or classes in a template | `make css` |
+| A file in `internal/store/queries/` or `migrations/` | `make sqlc` |
+| Any of the above, before committing | `make generate` |
+| Go code | `make fmt lint test` |
 
-### Frontend commands
+`make check` runs what CI runs.
 
-| Command | Purpose |
-| --- | --- |
-| `mage frontendInstall` | Install Bun dependencies in `web/` |
-| `mage frontendDev` | Run Astro dev on port `4321` |
-| `mage frontendCheck` | Run Biome, `astro check`, and Bun tests |
-| `mage frontendBuild` | Build the frontend into `web/dist` |
-| `mage frontendSmoke` | Run the Astro browser smoke flow |
-| `mage smoke` | Run the Docker-backed Go-served runtime smoke flow |
+## Adding a database table
 
-## Generated Files And Checked-In Artifacts
+1. Create the migration:
 
-The repo intentionally checks in:
+   ```bash
+   make migration name=create_widgets
+   ```
 
-- SQLC-generated Go output under `internal/store/`
-- the built frontend under `web/dist/`
+   Fill in both sections of the new file. Always write the `Down` section;
+   a test rolls every migration back and reapplies it.
 
-`mage generate` only covers SQLC generation now. Frontend artifact drift is caught by the frontend build and smoke checks.
+   ```sql
+   -- +goose Up
+   CREATE TABLE widgets (
+       id         BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+       owner_id   BIGINT NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+       name       TEXT NOT NULL,
+       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+   );
 
-## What Requires Regeneration
+   -- +goose Down
+   DROP TABLE widgets;
+   ```
 
-Run `mage generate` after changing:
+2. Write queries in `internal/store/queries/widgets.sql`:
 
-- `internal/store/queries.sql`
-- `internal/store/schema.sql`
-- SQLC config that affects generated output
+   ```sql
+   -- name: ListWidgetsByOwner :many
+   SELECT * FROM widgets WHERE owner_id = $1 ORDER BY created_at DESC;
+   ```
 
-Run frontend checks and rebuild after changing:
+3. Run `make sqlc`. The new methods appear on `store.Store`.
 
-- files under `web/src/`
-- frontend config under `web/`
-- content that should change the committed `web/dist/` output
+4. Restart the app (or run `make migrate`) to apply the migration.
 
-## Verification
+## Adding a page
 
-Start narrow and broaden when needed:
+1. **View.** Add a component to a `.templ` file in `internal/view` that
+   takes a `Page` and wraps its content in `@Layout(p) { ... }`.
+2. **Handler.** Add a method on `*Server` in `internal/web` with the
+   signature `func(w http.ResponseWriter, r *http.Request) error`, ending in
+   `return render(w, r, http.StatusOK, view.YourPage(s.page(r, "Title")))`.
+3. **Route.** Register it in `internal/web/routes.go`, wrapped in
+   `s.requireUser(...)` or `s.requireAdmin(...)` if it needs a signed-in
+   user.
 
-```bash
-go build ./...
-go vet ./...
-go test ./...
-```
+For a form, copy the shape of `register` in
+`internal/web/handlers_auth.go`: a form struct in `internal/view/view.go`,
+validation into `view.Errors`, re-render with 422 on failure, flash and
+redirect on success.
 
-Frontend checks:
-
-```bash
-mage frontendCheck
-mage frontendBuild
-```
-
-Smoke validation:
+## Tests
 
 ```bash
-./scripts/frontend-smoke.sh
-./scripts/runtime-smoke.sh
+make test         # everything, with the race detector
+make test-short   # only tests that need no database
 ```
 
-## Current Frontend Boundary
+`make test` expects the `make db-up` database. To use another server:
 
-- `web/` is the only active browser frontend workspace.
-- The Go server embeds `web/dist` and serves it for the shipped browser pages.
-- The frontend uses `/_backend/*` as its same-origin bridge and the Go server strips that prefix in shipped builds.
-- Managed-user mutations now go through `/api/users/*` only.
-- Browser auth form fallback submits remain at `POST /auth/*` for simple non-JavaScript flows and smoke coverage.
+```bash
+TEST_DATABASE_URL=postgres://user:pass@localhost:5433/dbname make test
+```
+
+The role needs permission to create schemas in that database. Each test
+calls `storetest.New(t)`, which creates a uniquely named schema, migrates
+it, and drops it when the test ends. Tests are isolated from each other and
+from any other data in the database, and run in parallel.
+
+The end-to-end tests in `internal/web` start the complete handler stack on
+an `httptest.Server` and drive it with a cookie-carrying HTTP client, the
+way a browser would. `newApp(t)` and `a.newBrowser()` in
+`internal/web/web_test.go` are the helpers to reuse.
+
+## Upgrading tools and dependencies
+
+- **Go modules:** `go get -u ./... && go mod tidy`, then `make check`.
+- **templ:** `go get -tool github.com/a-h/templ/cmd/templ@latest`, then
+  `make templ`.
+- **sqlc, golangci-lint, govulncheck:** change the version at the top of the
+  `Makefile`, then `make generate` or `make lint`.
+- **Tailwind:** change `TAILWIND_VERSION` and the four `TAILWIND_SHA256_*`
+  values (from the release's `sha256sums.txt`), then `make css`.
+- **htmx:** change `HTMX_VERSION` and `HTMX_SHA256`, then `make htmx`.
+  htmx 4 is published under the `next` tag and changes how requests are
+  made; this template stays on the stable 2.x line.
+- **Go itself:** change the `go` and `toolchain` lines in `go.mod` and the
+  image tag in the `Dockerfile`.
+
+After any upgrade, `make check` is the gate: it regenerates the checked-in
+code, lints, runs the full test suite and scans for known vulnerabilities.

@@ -1,148 +1,28 @@
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-# Build directories and binaries
+# Build output and downloaded tools (the pinned Tailwind CLI lives in bin/)
 /bin/
-/dist/
-bin/
-bin
-server
-server.exe
+/tmp/
 
-# Generated binaries (common names)
-main
-main.exe
-app
-app.exe
-
-# Test binary, built with `go test -c`
-*.test
-
-# Output of the go coverage tool
-*.out
-coverage.*
-*.coverprofile
-profile.cov
-
-# Dependency directories
-vendor/
-
-# Go workspace file
-go.work
-go.work.sum
-
-# Environment files
+# Local configuration and secrets
 .env
-.env.local
-.env.development
-.env.production
+.env.*
+!.env.example
 
-# Database files
-data.db
-*.sqlite3
-/data/
+# Scratch files written by "templ generate --watch"
+*_templ.txt
 
-# Log files
-*.log
-logs/
+# Test and profiling output
+*.test
+*.out
+*.prof
+coverage.*
 
-# Temporary files
-tmp/
-temp/
-*.tmp
-*.swp
-*.swo
-*~
-
-# OS generated files
+# Editors and operating systems
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
-# Editor/IDE files
 .idea/
 .vscode/
-*.sublime-project
-*.sublime-workspace
-.vim/
-.emacs.d/
+*.swp
 
-# Build artifacts and generated files
-*.orig
-*.rej
-*.patch
-
-# Air (hot reload) temporary files
-.air/
-tmp-air/
-build-errors.log
-
-# Development and testing files
-*.test.cache/
-testdata/
-coverage/
-.coverage/
-
-# Node.js (if frontend tooling is added)
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-yarn.lock
-
-# Local frontend artifacts that should not be tracked
-/output/playwright/
-web/.astro/
-web/node_modules/
-web/playwright-report/
-web/test-results/
-
-# Docker
-Dockerfile.dev
-# Keep docker-compose.override.yml as it's used for development
-
-# CI/CD
-.github/workflows/test.yml.bak
-
-# Configuration overrides
-config.local.json
-config.local.yaml
-config.local.yml
-config.local.toml
-
-# SSL certificates
-*.pem
-*.key
-*.crt
-*.ca-bundle
-
-# Memory and CPU profiles
-*.prof
-*.mem
-*.cpu
-
-# Backup files
-*.bak
-*.backup
-
-# Future-proofing: common artifacts
-dist/
-build/
-out/
-target/
-.next/
-.nuxt/
-.cache/
-public/build/
-
-# The shipped Astro build is committed and embedded into the Go binary.
-!web/dist/
-!web/dist/**
+# Things that tend to get left behind while poking at a running server
+cookies.txt
+cookies.jar
+*.log

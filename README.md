@@ -1,164 +1,224 @@
 # go-web-server
 
-`go-web-server` is a Go starter with an Echo backend, PostgreSQL, SQLC, Mage, and a shipped Astro + Vue browser frontend embedded into the Go binary from `web/dist`. Go still owns sessions, CSRF, routing, and persistence. The browser UI now uses explicit same-origin JSON contracts under `/api/*`, with only the browser auth form posts kept as redirect-oriented fallbacks.
+[![CI](https://github.com/dunamismax/go-web-server/actions/workflows/ci.yml/badge.svg)](https://github.com/dunamismax/go-web-server/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/dunamismax/go-web-server)](https://github.com/dunamismax/go-web-server/releases/latest)
+[![Go](https://img.shields.io/github/go-mod/go-version/dunamismax/go-web-server)](go.mod)
+[![License: MIT](https://img.shields.io/github/license/dunamismax/go-web-server)](LICENSE)
 
-## What You Get
+A starting point for server-rendered web applications in Go. It ships with
+sign-up and sign-in, role-based access, an admin screen, a PostgreSQL
+database with migrations, and a test suite that runs against a real database.
+Everything compiles into one static binary.
 
-- Session-based login, registration, logout, and profile pages
-- A protected `/users` CRUD screen backed by PostgreSQL
-- An embedded Astro + Vue + Bun frontend for `/`, `/auth/login`, `/auth/register`, `/auth/logout`, `/profile`, and `/users`
-- Explicit JSON contracts for auth state and managed-user CRUD under `/api/*`
-- CSRF protection, security headers, request IDs, rate limiting, and structured errors
-- Mage tasks for setup, generation, formatting, linting, testing, building, and release work
-- Atlas migrations plus a schema bootstrap path for fresh local bring-up
-- CI that regenerates SQLC output, verifies frontend install/check/build, runs mocked Playwright coverage, and exercises both Astro-preview and Go-served browser smoke flows
+The whole toolchain is Go. There is no Node.js, no bundler and no
+`node_modules`.
 
-## What You Do Not Get
+![The user management page](docs/media/users.png)
 
-- Roles, per-user authorization, or record ownership rules
-- Password reset, email verification, or account recovery
-- Metrics, tracing, or `pprof` endpoints wired into the app
-- A polished design system or product-specific architecture
-- A complete production platform story beyond simple single-host deployment
+## The stack
 
-## Quick Start
+| Concern | Choice | Why |
+| --- | --- | --- |
+| HTTP | [`net/http`](https://pkg.go.dev/net/http) | The standard library router has had method and wildcard patterns since Go 1.22. There is no framework to upgrade or outgrow. |
+| HTML | [templ](https://templ.guide) | Components are type-checked and compiled to Go. A misspelled field fails the build instead of rendering blank. |
+| Interactivity | [htmx](https://htmx.org) 2 | Search-as-you-type and in-place updates from HTML attributes. Every page also works with JavaScript turned off. |
+| CSS | [Tailwind CSS](https://tailwindcss.com) 4 | Compiled by the standalone CLI, which the Makefile downloads and checksum-verifies. |
+| Database | PostgreSQL via [pgx](https://github.com/jackc/pgx) | The native driver and connection pool. |
+| Queries | [sqlc](https://sqlc.dev) | You write SQL; it generates type-safe Go. No ORM. |
+| Migrations | [goose](https://github.com/pressly/goose) | Plain SQL files embedded in the binary, applied at startup or with `server migrate`. |
+| Sessions | [scs](https://github.com/alexedwards/scs) | Server-side sessions stored in PostgreSQL, so sign-outs and deactivations take effect immediately. |
+| Passwords | Argon2id | Via `golang.org/x/crypto`, in the standard PHC format, with automatic upgrades when the parameters are raised. |
+| CSRF | `http.CrossOriginProtection` | The standard library's token-free defense (Go 1.25+). Forms need no hidden fields. |
+| Config | Environment variables | Parsed into a typed struct by [caarlos0/env](https://github.com/caarlos0/env). |
+| Logging | `log/slog` | Structured logs: text in development, JSON in production. |
+| Tasks | `make` | One Makefile pins every tool version for local runs, CI and Docker alike. |
 
-1. Start PostgreSQL locally and create a database:
+## Quick start
 
-```bash
-createuser -P gowebserver
-createdb -O gowebserver gowebserver
-```
+This is a GitHub template repository: **Use this template** on the repository
+page gives you your own copy to start from.
 
-2. Copy the sample environment file and update it for your machine:
-
-```bash
-cp .env.example .env
-```
-
-Set at least:
-
-- `DATABASE_URL=postgres://gowebserver:your-password@localhost:5432/gowebserver?sslmode=disable`
-- `AUTH_COOKIE_SECURE=false` for plain HTTP localhost development
-
-3. Install the local toolchain and generate derived backend code:
+You need Go 1.27 or newer, `make`, and PostgreSQL. Docker is the easiest way
+to get PostgreSQL but is not required.
 
 ```bash
-mage setup
-mage generate
+git clone https://github.com/dunamismax/go-web-server.git
+cd go-web-server
+make setup     # downloads Go modules and the Tailwind CLI, creates .env
+make db-up     # starts PostgreSQL 18 in Docker
+make dev       # runs the app with live reload
 ```
 
-4. Start the app:
+Open <http://localhost:7331> and create an account. The first account on a
+fresh database becomes the administrator.
+
+`make dev` proxies the app through port 7331 so the browser reloads when you
+save a `.go`, `.templ` or CSS change. The app itself listens on port 8080.
+
+**Port 5432 already in use?** Start the database on another port with
+`DB_PORT=5433 make db-up` and change the port in `DATABASE_URL` in `.env`.
+
+**Prefer a PostgreSQL you already run?** Create a role and database, then
+point `DATABASE_URL` in `.env` at them:
 
 ```bash
-mage dev
+createuser --pwprompt gowebserver
+createdb --owner gowebserver gowebserver
 ```
 
-Use `mage run` if you want a plain build-and-run without Air.
+**Only want to look?** The generated code is checked in, so a fresh clone
+builds with nothing but Go: `go run ./cmd/server` (with `DATABASE_URL` set).
 
-5. Optional but recommended: run the Astro browser smoke check to prove the frontend can register, load protected pages, and exercise the real Go backend end to end:
+## Everyday commands
 
-```bash
-mage frontendSmoke
-```
+Run `make help` for the full list.
 
-6. If you also want coverage for the shipped Go-served browser path, run the Docker-backed runtime smoke check:
-
-```bash
-mage smoke
-```
-
-The app listens on [http://localhost:8080](http://localhost:8080). Open [http://localhost:8080/auth/register](http://localhost:8080/auth/register) to create the first account.
-
-## Common Commands
-
-| Command | Purpose |
+| Command | What it does |
 | --- | --- |
-| `mage setup` | Install Go tools and download dependencies |
-| `mage dev` | Run the current Go app with Air hot reload |
-| `mage frontendInstall` | Install Bun-managed frontend dependencies in `web/` |
-| `mage frontendDev` | Run the Astro frontend on port `4321` |
-| `mage frontendCheck` | Run Biome, `astro check`, and Bun tests for `web/` |
-| `mage frontendBuild` | Build the Astro frontend |
-| `mage frontendSmoke` | Run the Astro browser smoke flow against the real Go backend |
-| `mage run` | Build and run the server once |
-| `mage generate` | Regenerate SQLC output |
-| `mage fmt` | Format Go code and tidy modules |
-| `mage vet` | Run `go vet ./...` |
-| `mage test` | Run `go test ./...` |
-| `mage smoke` | Run the Docker-backed Go-served runtime smoke validation |
-| `mage lint` | Run `golangci-lint` |
-| `mage quality` | Run vet, test, lint, and `govulncheck` |
-| `mage ci` | Run the main local CI-style pipeline |
-| `mage migrate` | Apply Atlas migrations |
-| `mage migrateStatus` | Show Atlas migration state |
+| `make dev` | Run with live reload |
+| `make generate` | Regenerate sqlc, templ and CSS output after editing their sources |
+| `make test` | Run every test with the race detector, including the PostgreSQL-backed ones |
+| `make test-short` | Run only the tests that need no database |
+| `make lint` / `make fmt` | Lint with golangci-lint / format Go and templ files |
+| `make check` | Everything CI runs: generated-code check, lint, tests, vulnerability scan, build |
+| `make build` | Build the production binary to `bin/server`, stamped with the Git version |
+| `make migration name=add_widgets` | Create a new migration file |
+| `make migrate` / `make migrate-status` | Apply migrations / show their state |
+| `make docker` | Build the container image |
 
-`mage migrateDown` is informational only. Atlas does not auto-rollback this repo.
+## What is in the box
 
-## Verification
+- **Accounts.** Sign-up, sign-in, sign-out, a profile page and password
+  changes. Changing a password signs out every other device.
+- **Roles.** `admin` and `member`. Admins get a user management screen with
+  search, pagination, create, edit, deactivate and delete. Admins cannot
+  demote, deactivate or delete themselves, so there is always one left.
+- **Security defaults.** A strict Content Security Policy with nothing
+  inline, security headers, CSRF protection, rate-limited sign-in, hardened
+  session cookies, and login responses that do not reveal which emails exist.
+  See [docs/security.md](docs/security.md).
+- **Operations.** `/healthz` and `/readyz` probes, graceful shutdown,
+  request IDs in logs and on error pages, a distroless container image, and a
+  sandboxed systemd unit with a Caddy example.
+- **Tests.** Unit tests plus end-to-end tests that drive the real handler
+  stack against a real PostgreSQL, each in its own throwaway schema.
 
-These are the baseline checks for code changes:
+## Project layout
 
-```bash
-go build ./...
-go vet ./...
-go test ./...
+```text
+cmd/server/            Entry point: serve, migrate, healthcheck, version
+internal/
+  assets/              Embedded static files, and the Tailwind source
+  auth/                Argon2id password hashing
+  config/              Environment-variable configuration
+  store/               Connection pool, migrations, queries, sqlc output
+    migrations/        goose SQL migrations (the schema's source of truth)
+    queries/           SQL that sqlc turns into Go
+    storetest/         Isolated test databases
+  view/                templ components and the data types that drive them
+  web/                 Routes, middleware, sessions and handlers
+deploy/                systemd unit, Caddyfile and production env example
+docs/                  Architecture, development, security and deployment notes
 ```
 
-Cheap repo-native checks that are worth running when relevant:
+[docs/architecture.md](docs/architecture.md) explains how the pieces fit and
+why they are split this way.
+
+## Configuration
+
+All configuration is environment variables. In development the server also
+reads a `.env` file, and real environment variables override it.
+[`.env.example`](.env.example) documents each one.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `APP_ENV` | `development` | `production` switches to JSON logs, Secure cookies and HSTS |
+| `HTTP_ADDR` | `:8080` | Listen address; falls back to `:$PORT` when unset |
+| `DATABASE_URL` | required | PostgreSQL connection string |
+| `DATABASE_MAX_CONNS` | `10` | Connection pool size |
+| `DATABASE_AUTO_MIGRATE` | `true` | Apply pending migrations at startup |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn` or `error` |
+| `LOG_FORMAT` | by environment | `text` or `json` |
+| `SESSION_LIFETIME` | `168h` | How long a sign-in lasts |
+| `SESSION_COOKIE_SECURE` | by environment | Force the cookie's `Secure` flag on or off |
+| `TRUSTED_PROXIES` | empty | Proxies whose `X-Forwarded-For` is believed |
+| `TRUSTED_ORIGINS` | empty | Extra origins allowed to send state-changing requests |
+| `SHUTDOWN_TIMEOUT` | `15s` | Grace period for in-flight requests |
+
+## Making it yours
+
+1. Rename the module: `make rename module=github.com/you/yourapp`.
+2. Change `AppName` in [`internal/view/view.go`](internal/view/view.go).
+3. Add your own tables with `make migration name=...`, your queries under
+   [`internal/store/queries/`](internal/store/queries/), and run
+   `make generate`.
+4. Add pages: a templ component in `internal/view`, a handler in
+   `internal/web`, and a line in
+   [`internal/web/routes.go`](internal/web/routes.go).
+
+[docs/development.md](docs/development.md) walks through each of these.
+
+## Testing
 
 ```bash
-mage frontendCheck
-mage frontendBuild
-mage lint
+make db-up
+make test
 ```
 
-For real browser-path bring-up confidence, run the Astro browser smoke check when Bun and Playwright are available:
+Tests that need PostgreSQL read `TEST_DATABASE_URL`, which `make test` points
+at the `make db-up` database. Each test creates its own schema, migrates it,
+and drops it afterwards, so tests run in parallel and never touch your
+development data. Plain `go test ./...` skips those tests when the variable
+is unset.
 
-```bash
-./scripts/frontend-smoke.sh
-```
+## Deploying
 
-If you want coverage for the shipped Go-served browser path, run the runtime smoke check when Docker is available:
+The build output is one static binary with the templates, styles and
+migrations inside it. Two paths are documented in
+[docs/deployment.md](docs/deployment.md):
 
-```bash
-./scripts/runtime-smoke.sh
-```
+- a container image (`make docker`, about 25 MB, distroless, non-root), and
+- a Linux host with systemd and Caddy, using the files in
+  [`deploy/`](deploy/).
 
-`mage ci` mirrors the main local validation flow without calling the formatting target.
+## What is left out on purpose
 
-## Documentation
+These depend too much on the product to guess well:
 
-- [Docs index](docs/README.md)
-- [Development guide](docs/development.md)
-- [API and route behavior](docs/api.md)
-- [Frontend migration inventory](docs/frontend-migration-inventory.md)
-- [Security notes](docs/security.md)
-- [Architecture overview](docs/architecture.md)
-- [Deployment notes](docs/deployment.md)
-- [Ubuntu deployment walkthrough](docs/ubuntu-deployment.md)
-- [Example YAML config](docs/config.example.yaml)
+- Email: verification, password reset and notifications
+- Two-factor authentication and social sign-in
+- A JSON API (the handlers render HTML; add API routes beside them if you
+  need one)
+- Metrics, tracing and background jobs
+- Multi-instance rate limiting (the built-in limiter is per process)
 
-## Current-State Notes
+## Upgrading from 4.x
 
-- The canonical Atlas migration directory is top-level [`migrations/`](migrations/).
-- The duplicate `internal/store/migrations/` directory is legacy history, not the source of truth.
-- [`internal/store/schema.sql`](internal/store/schema.sql) is the schema source used for SQLC and Atlas.
-- The app still keeps a startup bootstrap path in [`internal/store/store.go`](internal/store/store.go), but it now executes the canonical [`internal/store/schema.sql`](internal/store/schema.sql) before applying a small legacy reconciliation patch for older local databases.
-- Generated SQLC output and the built `web/dist` frontend are checked in. CI reruns `mage generate` and frontend build checks to catch drift.
-- `web/` is the Astro + Vue + Bun frontend workspace. Its built `web/dist` output is committed and embedded into the Go binary for the shipped browser routes.
-- The embedded Astro build still talks to `/_backend/*`; the Go server strips that prefix in-process for shipped builds, while Astro dev keeps using it as a real proxy prefix.
-- Browser auth fallback submits still exist at `POST /auth/login`, `POST /auth/register`, and `POST /auth/logout`, but managed-user browser mutations now go through `/api/users/*` only.
-- CI installs Bun dependencies, runs frontend checks and builds, exercises the mocked Playwright suite, and then runs both the Astro browser smoke flow and the Go-served runtime smoke flow.
-- [`scripts/frontend-smoke.sh`](scripts/frontend-smoke.sh) validates the Astro home, registration, profile, users create/edit/deactivate/delete, and logout flow against the real Go backend.
-- [`scripts/runtime-smoke.sh`](scripts/runtime-smoke.sh) validates the Go-served embedded Astro shell, the same-origin `/_backend/*` bridge it uses at runtime, and the browser registration redirect path.
-- Leave `security.trusted_proxies` empty unless the app is actually behind reverse proxies you control.
+Version 5 is a rewrite, not an in-place upgrade. If you built on 4.x, treat
+5 as a reference rather than merging it. [CHANGELOG.md](CHANGELOG.md) has the
+full list.
 
-## Naming Notes
+| 4.x | 5 |
+| --- | --- |
+| Echo v4 | Standard library `net/http` |
+| Tailwind and DaisyUI built with npm | Tailwind 4 from the standalone CLI; no Node.js |
+| Custom CSRF token middleware | `http.CrossOriginProtection` |
+| Atlas migrations plus a startup schema bootstrap | goose migrations embedded in the binary |
+| Mage | Make |
+| koanf (YAML, `.env` and environment) | Environment variables only |
+| Air | `templ generate --watch` |
+| GoReleaser packaging | A Dockerfile and a systemd unit |
+| Any signed-in user manages all users | `admin` and `member` roles |
 
-This repo currently has two names in play:
+The database schema starts over with a single migration, the routes moved
+(`/auth/login` is now `/login`, `/profile` is now `/account`, `/health` is
+now `/healthz` and `/readyz`),
+and the environment variable names changed. See
+[`.env.example`](.env.example).
 
-- Repo, local checkout, and Go module path: `go-web-server`
-- Deployment user/service/database examples: `gowebserver`
+The Astro + Vue frontend and JSON API that were on `main` between 4.0.0 and
+5.0.0 were never released and are not part of 5.
 
-The repo and module naming are aligned again. The `gowebserver` deployment naming stays as a simple service/database slug.
+## License
+
+[MIT](LICENSE)
